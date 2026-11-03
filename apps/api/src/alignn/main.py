@@ -10,7 +10,10 @@ from sqlalchemy.exc import IntegrityError
 from alignn.config import Settings
 from alignn.config import settings as default_settings
 from alignn.db import SessionLocal
+from alignn.domains.files.router import router as files_router
 from alignn.domains.identity.router import router as identity_router
+from alignn.domains.organizations.router import router as organizations_router
+from alignn.domains.profiles.router import router as profiles_router
 from alignn.errors import DomainError
 from alignn.jobs.router import router as jobs_router
 
@@ -112,6 +115,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(identity_router)
     app.include_router(jobs_router)
+    app.include_router(profiles_router)
+    app.include_router(organizations_router)
+    app.include_router(files_router)
     return app
 
 

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     mail_port: int = 1025
     mail_from: str = "hello@alignn.test"
     object_endpoint: str | None = None
+    object_driver: Literal["local", "s3"] = "local"
     object_bucket: str = "alignn-private"
     object_access_key: str | None = None
     object_secret_key: str | None = None
@@ -27,6 +28,8 @@ class Settings(BaseSettings):
         if not self.database_url.startswith("postgresql"):
             raise ValueError("PostgreSQL is required")
         if self.environment == "production":
+            if self.object_driver != "s3":
+                raise ValueError("Production requires private S3-compatible storage")
             if not self.public_origin.startswith("https://"):
                 raise ValueError("Production requires an HTTPS public origin")
             if not all(

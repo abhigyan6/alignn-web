@@ -18,7 +18,9 @@ from alignn.db import engine  # noqa: E402
 
 @pytest.fixture(autouse=True)
 def clean_database():
-    tables = [n for n in inspect(engine).get_table_names() if n != "alembic_version"]
+    tables = [
+        n for n in inspect(engine).get_table_names() if n not in {"alembic_version", "skills"}
+    ]
     if tables:
         names = ", ".join('"' + t.replace('"', '""') + '"' for t in tables)
         with engine.begin() as connection:
@@ -44,3 +46,54 @@ def clock():
             return datetime.now(timezone.utc)
 
     return Clock()
+
+
+@pytest.fixture
+def make_user():
+    from uuid import uuid4
+
+    from alignn.db import SessionLocal
+    from alignn.domains.identity.models import User
+    from alignn.domains.identity.service import hasher
+
+    def create(verified=False, admin=False, email=None):
+        with SessionLocal.begin() as db:
+            user = User(
+                email=email or f"{uuid4().hex}@alignn.test",
+                full_name="Test Participant",
+                password_hash=hasher.hash("Test-password-42!"),
+                is_verified=verified,
+                is_admin=admin,
+            )
+            db.add(user)
+            db.flush()
+            return user
+
+    return create
+
+
+@pytest.fixture
+def api_client():
+    from contextlib import ExitStack
+
+    from fastapi.testclient import TestClient
+
+    from alignn.db import SessionLocal, utcnow
+    from alignn.domains.identity.service import issue_session
+    from alignn.main import create_app
+
+    with ExitStack() as stack:
+
+        def create(user=None):
+            client = stack.enter_context(TestClient(create_app()))
+            if user:
+                with SessionLocal.begin() as db:
+                    secret = issue_session(db, user.id, utcnow())
+                client.cookies.set("alignn_session", secret.token)
+                client.cookies.set("alignn_csrf", secret.csrf)
+                client.headers.update(
+                    {"origin": "http://localhost:3000", "x-csrf-token": secret.csrf}
+                )
+            return client
+
+        yield create
