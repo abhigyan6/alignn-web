@@ -82,10 +82,12 @@ def api_client():
     from alignn.domains.identity.service import issue_session
     from alignn.main import create_app
 
+    app = create_app()
+    app.openapi()
     with ExitStack() as stack:
 
         def create(user=None):
-            client = stack.enter_context(TestClient(create_app()))
+            client = stack.enter_context(TestClient(app))
             if user:
                 with SessionLocal.begin() as db:
                     secret = issue_session(db, user.id, utcnow())

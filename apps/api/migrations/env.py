@@ -7,7 +7,9 @@ from alignn.domains.files import models as file_models  # noqa: F401
 from alignn.domains.identity import models  # noqa: F401
 from alignn.domains.opportunities import models as opportunity_models  # noqa: F401
 from alignn.domains.organizations import models as organization_models  # noqa: F401
+from alignn.domains.participation import models as participation_models  # noqa: F401
 from alignn.domains.profiles import models as profiles_models  # noqa: F401
+from alignn.domains.teams import models as team_models  # noqa: F401
 from alignn.jobs import models as jobs_models  # noqa: F401
 
 config = context.config

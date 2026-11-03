@@ -70,3 +70,27 @@ def dispatch(kind: str, payload: dict, adapters: Adapters, key: str):
     if not handler:
         raise PermanentDeliveryError("unsupported_job")
     handler(payload, adapters, key)
+
+
+def registration_notice(payload, adapters, key):
+    from uuid import UUID
+
+    from alignn.db import SessionLocal
+    from alignn.domains.identity.models import User
+
+    with SessionLocal() as db:
+        user = db.get(User, UUID(payload["user_id"]))
+        if not user or not user.is_active:
+            return
+        email = user.email
+    adapters.mail.send(
+        to=email,
+        subject="Your Alignn registration is confirmed",
+        text="You are registered for "
+        + payload["title"]
+        + ". Open your Alignn workspace for next steps.",
+        delivery_key=key,
+    )
+
+
+HANDLERS["registration_notice"] = registration_notice
