@@ -33,4 +33,4 @@ class FileInit(StrictModel):
 
 
 class GrantCreate(StrictModel):
-    organization_id: UUID
+    opportunity_id: UUID

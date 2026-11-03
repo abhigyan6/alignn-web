@@ -1,0 +1,95 @@
+import re
+
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
+
+from alignn.domains.opportunities.models import MatchSnapshot, Opportunity
+from alignn.domains.profiles.models import Profile, ProfileSkill, Project, Skill
+
+WEIGHTS = [35, 25, 20, 10, 10]
+
+
+def weighted_fit(factors):
+    return round(sum(x * w / 100 for x, w in zip(factors, WEIGHTS, strict=True)), 2)
+
+
+def skill_score(owned, required, preferred):
+    total = 2 * len(set(required)) + len(set(preferred))
+    return (
+        100 * (2 * len(owned & set(required)) + len(owned & set(preferred))) / total if total else 0
+    )
+
+
+def tokens(value):
+    return set(re.findall(r"[a-z0-9]+", value.lower()))
+
+
+def overlap(a, b):
+    return 100 * len(a & b) / len(b) if b else 0
+
+
+def calculate_fit(db, user_id, opportunity):
+    p = db.scalar(select(Profile).where(Profile.user_id == user_id))
+    owned = set(
+        db.scalars(select(Skill.key).join(ProfileSkill).where(ProfileSkill.user_id == user_id))
+    )
+    projects = db.scalars(select(Project).where(Project.user_id == user_id)).all()
+    required = set(opportunity.required_skills + opportunity.preferred_skills)
+    project_skills = {k for project in projects for k in project.skill_ids}
+    factors = [
+        skill_score(owned, opportunity.required_skills, opportunity.preferred_skills),
+        overlap(project_skills, required),
+        overlap(set(p.career_interests if p else []), set(opportunity.interests)),
+        100 if p and p.preferred_work_mode in {"ANY", opportunity.work_mode} else 0,
+        100
+        if p
+        and (
+            opportunity.work_mode == "REMOTE"
+            or opportunity.location.lower() in p.preferred_locations
+        )
+        else 0,
+    ]
+    return {
+        "score": weighted_fit(factors),
+        "factors": dict(
+            zip(
+                ["technical", "projects", "interests", "work_mode", "location"],
+                factors,
+                strict=True,
+            )
+        ),
+        "algorithm_version": "fit-1",
+        "profile_revision": p.revision if p else 0,
+        "opportunity_version": opportunity.version,
+        "confidence": sum(x > 0 for x in factors) / 5,
+        "explanation": "Evidence overlap, not a prediction of selection.",
+    }
+
+
+def rebuild_matches(user_id):
+    from alignn.db import SessionLocal
+
+    with SessionLocal.begin() as db:
+        for o in db.scalars(select(Opportunity).where(Opportunity.status == "PUBLISHED")).yield_per(
+            100
+        ):
+            result = calculate_fit(db, user_id, o)
+            values = dict(
+                user_id=user_id,
+                opportunity_id=o.id,
+                profile_revision=result["profile_revision"],
+                opportunity_version=o.version,
+                score=result["score"],
+                evidence=result,
+                algorithm_version="fit-1",
+            )
+            db.execute(
+                insert(MatchSnapshot)
+                .values(**values)
+                .on_conflict_do_update(
+                    index_elements=["user_id", "opportunity_id"],
+                    set_={
+                        k: v for k, v in values.items() if k not in {"user_id", "opportunity_id"}
+                    },
+                )
+            )

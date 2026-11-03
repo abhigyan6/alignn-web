@@ -48,7 +48,9 @@ def list_skills(request: Request):
 def edit_skills(data: SkillsUpdate, request: Request):
     db = request.state.db
     actor = get_actor(request)
-    validate_skills(db, [s.skill_id for s in data.skills])
+    canonical = validate_skills(db, [s.skill_id for s in data.skills])
+    for entry, key in zip(data.skills, canonical, strict=True):
+        entry.skill_id = key
     db.scalar(select(User).where(User.id == actor.user_id).with_for_update())
     db.execute(delete(ProfileSkill).where(ProfileSkill.user_id == actor.user_id))
     for entry in data.skills:
@@ -73,7 +75,7 @@ def projects(request: Request):
 def add_project(data: ProjectCreate, request: Request):
     actor = get_actor(request)
     db = request.state.db
-    validate_skills(db, data.skill_ids)
+    data.skill_ids = validate_skills(db, data.skill_ids)
     project = Project(user_id=actor.user_id, **data.model_dump())
     db.add(project)
     update_profile(db, actor, ProfileUpdate())

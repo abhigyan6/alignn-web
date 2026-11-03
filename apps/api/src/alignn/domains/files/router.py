@@ -14,7 +14,7 @@ from alignn.domains.files.models import ConsentGrant, DownloadTicket, PrivateFil
 from alignn.domains.files.schemas import FileInit, GrantCreate
 from alignn.domains.files.service import authorize_file
 from alignn.domains.identity.service import check_csrf, digest, get_actor, limit
-from alignn.domains.organizations.models import Organization
+from alignn.domains.opportunities.service import visible
 from alignn.errors import DomainError
 from alignn.jobs.worker import enqueue_job
 
@@ -157,9 +157,9 @@ def complete_upload(id: UUID, request: Request):
 
 
 @router.get("/me/files/{id}/download")
-def download(id: UUID, request: Request):
+def download(id: UUID, request: Request, opportunity_id: UUID | None = None):
     actor = get_actor(request)
-    file = authorize_file(request.state.db, actor, id).file
+    file = authorize_file(request.state.db, actor, id, opportunity_id=opportunity_id).file
     objects = configured_objects(request.app.state.settings)
     if not isinstance(objects, LocalObjects):
         return {"url": objects.download_url(file.object_key, file.filename), "expires_in": 300}
@@ -167,6 +167,7 @@ def download(id: UUID, request: Request):
     request.state.db.add(
         DownloadTicket(
             file_id=id,
+            opportunity_id=opportunity_id,
             actor_id=actor.user_id,
             token_hash=digest(token),
             expires_at=utcnow() + timedelta(minutes=5),
@@ -188,7 +189,7 @@ def content(id: UUID, request: Request, ticket: str = Query(max_length=200)):
     )
     if not grant:
         raise DomainError("not_found", "This download link is no longer available.", 404)
-    file = authorize_file(request.state.db, actor, id).file
+    file = authorize_file(request.state.db, actor, id, opportunity_id=grant.opportunity_id).file
     objects = configured_objects(request.app.state.settings)
     if not isinstance(objects, LocalObjects):
         raise DomainError("not_found", "Use the private storage download link.", 404)
@@ -207,26 +208,28 @@ def grant_consent(id: UUID, data: GrantCreate, request: Request):
     file = db.get(PrivateFile, id)
     if not file or file.owner_id != actor.user_id:
         raise DomainError("not_found", "File not found.", 404)
-    if not db.get(Organization, data.organization_id):
-        raise DomainError("not_found", "Organization not found.", 404)
+    opportunity = visible(db, actor, data.opportunity_id)
     if file.purpose != "resume":
         raise DomainError(
             "invalid_grant", "Only a resume can be shared through this consent flow.", 422
         )
     grant = db.scalar(
         select(ConsentGrant).where(
-            ConsentGrant.file_id == id, ConsentGrant.organization_id == data.organization_id
+            ConsentGrant.file_id == id, ConsentGrant.opportunity_id == data.opportunity_id
         )
     )
     if grant:
         grant.revoked = False
     else:
         grant = ConsentGrant(
-            file_id=id, owner_id=actor.user_id, organization_id=data.organization_id
+            file_id=id,
+            opportunity_id=opportunity.id,
+            owner_id=actor.user_id,
+            organization_id=opportunity.organization_id,
         )
         db.add(grant)
         db.flush()
-    return {"id": grant.id, "organization_id": grant.organization_id, "revoked": False}
+    return {"id": grant.id, "opportunity_id": grant.opportunity_id, "revoked": False}
 
 
 @router.delete("/me/file-grants/{id}", status_code=204, dependencies=[Depends(check_csrf)])

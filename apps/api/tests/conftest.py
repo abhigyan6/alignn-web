@@ -97,3 +97,49 @@ def api_client():
             return client
 
         yield create
+
+
+@pytest.fixture
+def make_organization():
+    from alignn.db import SessionLocal
+    from alignn.domains.organizations.models import Membership, Organization
+
+    def create(owner_id, verified=False):
+        with SessionLocal.begin() as db:
+            o = Organization(name="Test Builders", verified=verified)
+            db.add(o)
+            db.flush()
+            db.add(Membership(organization_id=o.id, user_id=owner_id, role="OWNER"))
+            return o
+
+    return create
+
+
+@pytest.fixture
+def make_opportunity():
+    from datetime import timedelta
+
+    from alignn.db import SessionLocal, utcnow
+    from alignn.domains.opportunities.models import Opportunity
+
+    def create(organization_id, **overrides):
+        values = dict(
+            organization_id=organization_id,
+            organization_name="Test Builders",
+            title="Build tomorrow",
+            description="A student event for meaningful projects",
+            kind="HACKATHON",
+            mode="HOSTED",
+            status="PUBLISHED",
+            registration_closes_at=utcnow() + timedelta(days=10),
+            starts_at=utcnow() + timedelta(days=11),
+            ends_at=utcnow() + timedelta(days=12),
+        )
+        values.update(overrides)
+        with SessionLocal.begin() as db:
+            o = Opportunity(**values)
+            db.add(o)
+            db.flush()
+            return o
+
+    return create

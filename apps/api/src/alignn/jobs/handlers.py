@@ -49,7 +49,20 @@ def delete_object(payload: dict, adapters: Adapters, key: str):
     adapters.objects.delete(payload["object_key"])
 
 
-HANDLERS = {"mail": deliver_mail, "scan_file": scan_file, "delete_object": delete_object}
+def rank_profile(payload, adapters, key):
+    from uuid import UUID
+
+    from alignn.domains.matching.service import rebuild_matches
+
+    rebuild_matches(UUID(payload["user_id"]))
+
+
+HANDLERS = {
+    "mail": deliver_mail,
+    "scan_file": scan_file,
+    "delete_object": delete_object,
+    "rank_profile": rank_profile,
+}
 
 
 def dispatch(kind: str, payload: dict, adapters: Adapters, key: str):

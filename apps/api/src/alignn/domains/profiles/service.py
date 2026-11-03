@@ -57,6 +57,11 @@ def update_profile(db: Session, actor: Actor, data: ProfileUpdate) -> ProfileOut
 
 
 def validate_skills(db, keys: list[str]):
-    known = set(db.scalars(select(Skill.key).where(Skill.key.in_(keys))).all())
-    if set(keys) - known:
+    catalog = db.scalars(select(Skill)).all()
+    aliases = {alias.lower(): s.key for s in catalog for alias in [s.key, s.name, *s.aliases]}
+    normalized = [aliases.get(k.strip().lower()) for k in keys]
+    if any(k is None for k in normalized):
         raise DomainError("invalid_skill", "Choose skills from the catalog.", 422)
+    if len(set(normalized)) != len(normalized):
+        raise DomainError("duplicate_skill", "Each canonical skill can appear only once.", 422)
+    return normalized

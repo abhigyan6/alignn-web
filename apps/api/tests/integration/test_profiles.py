@@ -72,3 +72,12 @@ def test_profile_skill_and_project_boundaries(make_user, api_client):
     assert project.status_code == 201
     other = api_client(make_user(verified=True))
     assert other.delete("/api/v1/me/projects/" + project.json()["id"]).status_code == 404
+
+
+def test_skill_alias_uses_canonical_identity(make_user, api_client):
+    c = api_client(make_user(verified=True))
+    r = c.put("/api/v1/me/skills", json={"skills": [{"skill_id": "py", "level": "advanced"}]})
+    assert r.status_code == 200, r.text
+    assert r.json()[0]["skill_id"] == "python"
+    r = c.put("/api/v1/me/skills", json={"skills": [{"skill_id": "p", "level": "advanced"}]})
+    assert r.status_code == 422

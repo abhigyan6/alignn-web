@@ -27,7 +27,11 @@ class ScanResult:
 
 
 def authorize_file(
-    db: Session, actor: Actor, file_id: UUID, purpose: str = "download"
+    db: Session,
+    actor: Actor,
+    file_id: UUID,
+    purpose: str = "download",
+    opportunity_id: UUID | None = None,
 ) -> FileGrant:
     file = db.get(PrivateFile, file_id)
     if not file:
@@ -38,6 +42,7 @@ def authorize_file(
             .join(Membership, Membership.organization_id == ConsentGrant.organization_id)
             .where(
                 ConsentGrant.file_id == file.id,
+                ConsentGrant.opportunity_id == opportunity_id,
                 ~ConsentGrant.revoked,
                 Membership.user_id == actor.user_id,
                 Membership.role.in_(["OWNER", "MANAGER"]),
