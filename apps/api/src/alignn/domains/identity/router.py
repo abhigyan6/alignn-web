@@ -26,6 +26,7 @@ from alignn.domains.identity.service import (
     verify_password,
 )
 from alignn.errors import DomainError
+from alignn.jobs.worker import enqueue_job
 
 router = APIRouter(prefix="/api/v1", tags=["Identity"])
 
@@ -94,7 +95,8 @@ def signup(data: Signup, request: Request):
     )
     db.add(user)
     db.flush()
-    issue_action_token(db, user.id, "verify")
+    token = issue_action_token(db, user.id, "verify")
+    enqueue_account_mail(db, user, token, "verify", request.app.state.settings.public_origin)
     return user
 
 
@@ -144,7 +146,8 @@ def forgot_password(data: EmailRequest, request: Request):
     limit(db, "reset", request.client.host, 5)
     user = db.scalar(select(User).where(User.email == data.email.strip().lower(), User.is_active))
     if user:
-        issue_action_token(db, user.id, "reset")
+        token = issue_action_token(db, user.id, "reset")
+        enqueue_account_mail(db, user, token, "reset", request.app.state.settings.public_origin)
     return {"message": "If the account exists, a reset link will be sent."}
 
 
@@ -174,3 +177,23 @@ def list_sessions(request: Request):
         }
         for row in rows
     ]
+
+
+def enqueue_account_mail(db, user: User, token: str, purpose: str, origin: str):
+    from datetime import timedelta
+
+    page = "verify-email" if purpose == "verify" else "reset-password"
+    subject = "Verify your Alignn email" if purpose == "verify" else "Reset your Alignn password"
+    text = (
+        f"{subject}\n\n{origin}/{page}?token={token}\n\n"
+        "If you did not request this, you can ignore this message."
+    )
+    enqueue_job(
+        db,
+        kind="mail",
+        key=f"account-{purpose}-{digest(token)}",
+        payload={"to": user.email, "subject": subject, "text": text},
+        run_at=utcnow(),
+        expires_at=utcnow()
+        + (timedelta(hours=24) if purpose == "verify" else timedelta(minutes=30)),
+    )

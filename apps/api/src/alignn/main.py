@@ -12,6 +12,7 @@ from alignn.config import settings as default_settings
 from alignn.db import SessionLocal
 from alignn.domains.identity.router import router as identity_router
 from alignn.errors import DomainError
+from alignn.jobs.router import router as jobs_router
 
 logger = logging.getLogger("alignn")
 
@@ -110,6 +111,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return JSONResponse(status_code=503, content={"status": "unavailable"})
 
     app.include_router(identity_router)
+    app.include_router(jobs_router)
     return app
 
 

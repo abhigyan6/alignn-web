@@ -24,3 +24,23 @@ def clean_database():
         with engine.begin() as connection:
             connection.execute(text(f"TRUNCATE {names} CASCADE"))
     yield
+
+
+@pytest.fixture
+def db():
+    from alignn.db import SessionLocal
+
+    with SessionLocal() as session:
+        yield session
+        session.rollback()
+
+
+@pytest.fixture
+def clock():
+    from datetime import datetime, timezone
+
+    class Clock:
+        def now(self):
+            return datetime.now(timezone.utc)
+
+    return Clock()

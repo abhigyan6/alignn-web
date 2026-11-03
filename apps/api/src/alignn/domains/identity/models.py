@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from alignn.db import Base, Record
@@ -40,7 +40,6 @@ class ActionToken(Record, Base):
 
 class RateLimit(Base):
     __tablename__ = "rate_limits"
-    __table_args__ = (UniqueConstraint("key", "window"),)
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
     window: Mapped[int] = mapped_column(primary_key=True)
     attempts: Mapped[int] = mapped_column(default=1)

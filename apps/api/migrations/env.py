@@ -1,7 +1,9 @@
 from alembic import context
 
+from alignn.audit import AuditRecord  # noqa: F401
 from alignn.db import Base, engine
 from alignn.domains.identity import models  # noqa: F401
+from alignn.jobs import models as jobs_models  # noqa: F401
 
 config = context.config
 target_metadata = Base.metadata
