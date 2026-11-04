@@ -1272,6 +1272,95 @@
         "title": "RegistrationCreate",
         "type": "object"
       },
+      "RegistrationOut": {
+        "properties": {
+          "captain_id": {
+            "format": "uuid",
+            "title": "Captain Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "eligibility_snapshot_id": {
+            "format": "uuid",
+            "title": "Eligibility Snapshot Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "opportunity_id": {
+            "format": "uuid",
+            "title": "Opportunity Id",
+            "type": "string"
+          },
+          "policy_version": {
+            "title": "Policy Version",
+            "type": "integer"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "roster": {
+            "items": {
+              "$ref": "#/components/schemas/RosterMemberOut"
+            },
+            "title": "Roster",
+            "type": "array"
+          },
+          "roster_user_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Roster User Ids",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "CONFIRMED",
+              "WITHDRAWN",
+              "DISQUALIFIED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "team_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Id"
+          }
+        },
+        "required": [
+          "id",
+          "opportunity_id",
+          "team_id",
+          "eligibility_snapshot_id",
+          "captain_id",
+          "status",
+          "roster_user_ids",
+          "roster",
+          "policy_version",
+          "created_at",
+          "request_id"
+        ],
+        "title": "RegistrationOut",
+        "type": "object"
+      },
       "ReplayRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1309,6 +1398,30 @@
           "password"
         ],
         "title": "ResetRequest",
+        "type": "object"
+      },
+      "RosterMemberOut": {
+        "properties": {
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "profile_revision": {
+            "title": "Profile Revision",
+            "type": "integer"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "full_name",
+          "profile_revision"
+        ],
+        "title": "RosterMemberOut",
         "type": "object"
       },
       "Signup": {
@@ -3253,7 +3366,9 @@
           "201": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationOut"
+                }
               }
             },
             "description": "Successful Response"

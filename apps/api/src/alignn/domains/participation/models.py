@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, UniqueConstraint, text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,7 +13,16 @@ class Registration(Record, Base):
     opportunity_id: Mapped[UUID] = mapped_column(ForeignKey("opportunities.id"), index=True)
     captain_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
     team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"))
-    status: Mapped[str] = mapped_column(String(20), default="CONFIRMED")
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('PENDING','CONFIRMED','WITHDRAWN','DISQUALIFIED')",
+            name="ck_registration_status",
+        ),
+    )
+    eligibility_snapshot_id: Mapped[UUID] = mapped_column(
+        ForeignKey("eligibility_snapshots.id"), unique=True
+    )
+    status: Mapped[str] = mapped_column(String(20), default="PENDING")
     policy_version: Mapped[int]
     policy_snapshot: Mapped[dict] = mapped_column(JSONB)
     withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -57,3 +66,11 @@ class EventConsent(Record, Base):
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     opportunity_id: Mapped[UUID] = mapped_column(ForeignKey("opportunities.id"))
     contact: Mapped[bool] = mapped_column(default=False)
+
+
+class EligibilitySnapshot(Record, Base):
+    __tablename__ = "eligibility_snapshots"
+    opportunity_id: Mapped[UUID] = mapped_column(ForeignKey("opportunities.id"), index=True)
+    policy_version: Mapped[int]
+    policy: Mapped[dict] = mapped_column(JSONB)
+    evidence: Mapped[list] = mapped_column(JSONB)

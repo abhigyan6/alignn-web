@@ -17,7 +17,13 @@ from alignn.domains.teams.service import open_event, unlocked
 from alignn.errors import DomainError
 from alignn.jobs.worker import enqueue_job
 
-from .models import EventConsent, IdempotencyRecord, Registration, RegistrationMember
+from .models import (
+    EligibilitySnapshot,
+    EventConsent,
+    IdempotencyRecord,
+    Registration,
+    RegistrationMember,
+)
 
 
 def registration_out(db, r):
@@ -25,6 +31,15 @@ def registration_out(db, r):
         "id": str(r.id),
         "opportunity_id": str(r.opportunity_id),
         "team_id": str(r.team_id) if r.team_id else None,
+        "eligibility_snapshot_id": str(r.eligibility_snapshot_id),
+        "roster_user_ids": [
+            str(id)
+            for id in db.scalars(
+                select(RegistrationMember.user_id)
+                .where(RegistrationMember.registration_id == r.id)
+                .order_by(RegistrationMember.user_id)
+            )
+        ],
         "captain_id": str(r.captain_id),
         "status": r.status,
         "policy_version": r.policy_version,
@@ -133,8 +148,21 @@ def register(db, actor, opportunity_id, data, idempotency_key, clock):
     # Check the acceptance instant after every lock/evidence read, never a client timestamp.
     if clock.now() >= o.registration_closes_at:
         raise DomainError("registration_closed", "Registration has closed.", 409)
+    snapshot = EligibilitySnapshot(
+        opportunity_id=o.id,
+        policy_version=o.version,
+        policy=o.eligibility,
+        evidence=[
+            {"user_id": str(u.id), "profile_revision": rev, "evidence": p.model_dump(mode="json")}
+            for u, p, rev in evidence
+        ],
+    )
+    db.add(snapshot)
+    db.flush()
     r = Registration(
         opportunity_id=o.id,
+        eligibility_snapshot_id=snapshot.id,
+        status="PENDING",
         captain_id=actor.user_id,
         team_id=t.id if t else None,
         policy_version=o.version,
@@ -153,6 +181,7 @@ def register(db, actor, opportunity_id, data, idempotency_key, clock):
                 admission_evidence=p.model_dump(mode="json"),
             )
         )
+    r.status = "CONFIRMED"
     o.capacity_used += 1
     o.admission_started = True
     if t:

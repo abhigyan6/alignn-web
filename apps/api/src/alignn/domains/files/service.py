@@ -50,6 +50,10 @@ def authorize_file(
         )
         if not permission:
             raise DomainError("not_found", "File not found.", 404)
+    if file.owner_id != actor.user_id:
+        from alignn.domains.organizations.service import require_verified_organization
+
+        require_verified_organization(db, permission.organization_id)
     if file.scan_status != "CLEAN":
         raise DomainError("file_not_ready", "This file has not passed its safety checks.", 409)
     return FileGrant(file, actor.user_id)

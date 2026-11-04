@@ -9,10 +9,17 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "generate:api": "PYTHONPATH=apps/api/src apps/api/.venv/bin/python scripts/export-openapi.py && openapi-typescript packages/api-client/openapi.json -o packages/api-client/src/schema.d.ts"
+    "generate:api": "PYTHONPATH=apps/api/src apps/api/.venv/bin/python scripts/export-openapi.py && openapi-typescript packages/api-client/openapi.json -o packages/api-client/src/schema.d.ts",
+    "dev": "npm run dev --workspace @alignn/web",
+    "build": "npm run build --workspace @alignn/web",
+    "typecheck": "npm run typecheck --workspace @alignn/web",
+    "test:e2e": "npm run test:e2e --workspace @alignn/web",
+    "lint": "npm run lint --workspace @alignn/web"
   },
   "devDependencies": {
-    "openapi-typescript": "^7.13.0"
+    "@playwright/test": "^1.64.1",
+    "openapi-typescript": "^7.13.0",
+    "prettier": "^3.9.10"
   },
   "overrides": {
     "minimatch": "^11.0.1"

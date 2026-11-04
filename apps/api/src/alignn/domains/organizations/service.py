@@ -35,3 +35,14 @@ def lock_organization(db: Session, id: UUID) -> Organization:
     if not organization:
         raise DomainError("not_found", "Organization not found.", 404)
     return organization
+
+
+def require_verified_organization(db: Session, organization_id: UUID) -> Organization:
+    organization = db.get(Organization, organization_id)
+    if not organization or not organization.verified:
+        raise DomainError(
+            "organization_unverified",
+            "Organization verification is required for participant data access.",
+            403,
+        )
+    return organization

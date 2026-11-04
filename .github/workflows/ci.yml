@@ -30,3 +30,18 @@ jobs:
       - run: uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head
       - run: uv run --project apps/api ruff check apps/api
       - run: uv run --project apps/api pytest apps/api/tests -q
+
+  web:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build

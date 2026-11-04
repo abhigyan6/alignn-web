@@ -283,6 +283,16 @@ def verify_organization(id: UUID, data: ReplayRequest, request: Request):
     actor = require_admin(get_actor(request))
     db = request.state.db
     organization = lock_organization(db, id)
+    if db.scalar(
+        select(Membership).where(
+            Membership.organization_id == id, Membership.user_id == actor.user_id
+        )
+    ):
+        raise DomainError(
+            "verification_conflict",
+            "An independent administrator must verify this organization.",
+            403,
+        )
     organization.verified = True
     organization.verified_at = utcnow()
     db.add(

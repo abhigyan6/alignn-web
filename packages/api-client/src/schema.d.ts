@@ -1525,6 +1525,49 @@ export interface components {
             /** Team Id */
             team_id?: string | null;
         };
+        /** RegistrationOut */
+        RegistrationOut: {
+            /**
+             * Captain Id
+             * Format: uuid
+             */
+            captain_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Eligibility Snapshot Id
+             * Format: uuid
+             */
+            eligibility_snapshot_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Opportunity Id
+             * Format: uuid
+             */
+            opportunity_id: string;
+            /** Policy Version */
+            policy_version: number;
+            /** Request Id */
+            request_id: string;
+            /** Roster */
+            roster: components["schemas"]["RosterMemberOut"][];
+            /** Roster User Ids */
+            roster_user_ids: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "CONFIRMED" | "WITHDRAWN" | "DISQUALIFIED";
+            /** Team Id */
+            team_id: string | null;
+        };
         /** ReplayRequest */
         ReplayRequest: {
             /** Reason */
@@ -1536,6 +1579,18 @@ export interface components {
             password: string;
             /** Token */
             token: string;
+        };
+        /** RosterMemberOut */
+        RosterMemberOut: {
+            /** Full Name */
+            full_name: string;
+            /** Profile Revision */
+            profile_revision: number;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
         };
         /** Signup */
         Signup: {
@@ -2926,7 +2981,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RegistrationOut"];
                 };
             };
             /** @description Validation Error */

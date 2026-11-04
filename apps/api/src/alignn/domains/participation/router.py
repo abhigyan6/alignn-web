@@ -9,11 +9,11 @@ from alignn.domains.identity.models import User
 from alignn.domains.identity.service import check_csrf, get_actor
 from alignn.domains.opportunities.models import Opportunity
 from alignn.domains.opportunities.service import lock_opportunity
-from alignn.domains.organizations.service import require_membership
+from alignn.domains.organizations.service import require_membership, require_verified_organization
 from alignn.errors import DomainError
 
 from .models import EventConsent, Registration, RegistrationMember
-from .schemas import ConsentUpdate, RegistrationCreate
+from .schemas import ConsentUpdate, RegistrationCreate, RegistrationOut
 from .service import register, registration_out, set_consent, withdraw
 
 router = APIRouter(prefix="/api/v1", tags=["Participation"])
@@ -25,7 +25,10 @@ class Clock:
 
 
 @router.post(
-    "/opportunities/{id}/registrations", status_code=201, dependencies=[Depends(check_csrf)]
+    "/opportunities/{id}/registrations",
+    response_model=RegistrationOut,
+    status_code=201,
+    dependencies=[Depends(check_csrf)],
 )
 def create(
     id: UUID,
@@ -33,7 +36,8 @@ def create(
     request: Request,
     idempotency_key: str = Header(min_length=8, max_length=128),
 ):
-    return register(request.state.db, get_actor(request), id, data, idempotency_key, Clock())
+    result = register(request.state.db, get_actor(request), id, data, idempotency_key, Clock())
+    return {**result, "request_id": request.state.request_id}
 
 
 @router.post("/registrations/{id}/withdraw", dependencies=[Depends(check_csrf)])
@@ -83,6 +87,7 @@ def organizer(id: UUID, request: Request):
     if not o:
         raise DomainError("not_found", "Opportunity not found.", 404)
     require_membership(db, actor, o.organization_id, "manage")
+    require_verified_organization(db, o.organization_id)
     items = []
     for r in db.scalars(
         select(Registration)
