@@ -119,6 +119,57 @@ main {
   margin: auto;
   padding: 0 24px;
 }
+.coming-soon-page {
+  min-height: calc(100vh - 180px);
+  display: grid;
+  place-items: center;
+  padding-top: 48px;
+  padding-bottom: 72px;
+}
+.coming-soon-card {
+  max-width: 720px;
+  padding: clamp(36px, 8vw, 88px);
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 24px 70px rgb(23 33 61 / 10%);
+}
+.coming-soon-mark {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 24px;
+  place-items: center;
+  color: var(--accent);
+  background: #e7edff;
+  border-radius: 18px;
+}
+.coming-soon-mark svg {
+  width: 46px;
+  height: 46px;
+}
+.eyebrow {
+  margin: 0 0 12px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.coming-soon-card h1 {
+  margin-bottom: 20px;
+}
+.coming-soon-copy {
+  max-width: 520px;
+  margin: 0 auto;
+  font-size: 18px;
+}
+.coming-soon-note {
+  margin: 28px 0 0;
+  color: var(--ink);
+  font-weight: 700;
+}
 h1,
 h2,
 h3 {

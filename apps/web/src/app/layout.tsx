@@ -1,15 +1,10 @@
-import {
-  AuthProvider,
-  AccountControl,
-  SessionBridge,
-} from "@/components/auth-provider";
+import { AuthProvider, SessionBridge } from "@/components/auth-provider";
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "Alignn · Find your next opportunity",
-  description:
-    "Discover opportunities, understand eligibility and keep your next steps together.",
+  title: "Alignn · Coming soon",
+  description: "Alignn is building a clearer path to your next opportunity.",
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
   const configured = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
@@ -19,7 +14,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         Skip to content
       </a>
       <header className="site-header">
-        <Link className="brand" href="/explore">
+        <Link className="brand" href="/">
           <svg aria-hidden="true" viewBox="0 0 48 48">
             <path
               d="M12 12C19-2 38 9 32 22L13 37C0 42 1 20 17 20H31C49 20 47 47 30 42M31 10V34"
@@ -31,24 +26,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </svg>
           alignn
         </Link>
-        <nav aria-label="Main navigation">
-          <Link href="/explore">Explore</Link>
-          <Link href="/workspace" prefetch={false}>
-            My workspace
-          </Link>
-        </nav>
-        {configured ? (
-          <AccountControl />
-        ) : (
-          <Link className="button secondary" href="/login">
-            Sign in
-          </Link>
-        )}
       </header>
       {configured ? <SessionBridge>{children}</SessionBridge> : children}
       <footer className="site-footer">
         <strong>Find your people. Find your next step.</strong>
-        <span>Alignn · Opportunities with a clearer path forward.</span>
+        <span>Alignn · Coming soon.</span>
       </footer>
     </>
   );
