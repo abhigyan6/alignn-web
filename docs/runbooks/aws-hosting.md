@@ -2,6 +2,8 @@
 
 This is the latest hosting direction approved in chat on 5 November 2026. It supersedes the Heroku API placement in `heroku-staging.md` and the all-AWS/RDS proposal. Run Next.js, FastAPI, worker and scheduler as separate processes on one AWS host initially; keep the existing Heroku Essential-0 database. No Heroku Basic API dyno is needed. Do not upgrade the database without measured need and a budget decision.
 
+For the GitHub release workflow and the required one-time setup, see [GitHub Actions releases](github-deploy.md).
+
 ## Prepared files
 
 - `apps/web/Dockerfile`: Node 24 production Next.js server built from the root npm workspace. The public Clerk key is build-time; secret values are runtime-only. Root `.dockerignore` excludes environment files, Git history and local credentials.
