@@ -4,8 +4,9 @@ import time
 
 from alignn.db import SessionLocal, utcnow
 from alignn.domains.opportunities.ingestion import schedule_ingestion
+from alignn.jobs.retention import prune_retired_event_data
 
-SCHEDULES = [schedule_ingestion]
+SCHEDULES = [schedule_ingestion, prune_retired_event_data]
 
 
 def tick():

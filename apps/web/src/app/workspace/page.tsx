@@ -15,8 +15,8 @@ export default function Page() {
   return (
     <Suspense
       fallback={
-        <main id="main" className="auth">
-          <p role="status">Loading your account…</p>
+        <main id="main" className="workspace">
+          <p role="status">Loading your workspace…</p>
         </main>
       }
     >

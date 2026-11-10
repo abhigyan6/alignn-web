@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import delete, select
 
+from alignn.db import utcnow
 from alignn.domains.identity.models import User
 from alignn.domains.identity.service import check_csrf, get_actor
 from alignn.domains.profiles.models import Profile, ProfileSkill, Project, Skill
@@ -13,7 +14,12 @@ from alignn.domains.profiles.schemas import (
     ProjectOut,
     SkillsUpdate,
 )
-from alignn.domains.profiles.service import profile_out, update_profile, validate_skills
+from alignn.domains.profiles.service import (
+    get_profile,
+    profile_out,
+    update_profile,
+    validate_skills,
+)
 from alignn.errors import DomainError
 
 router = APIRouter(prefix="/api/v1", tags=["Profiles"])
@@ -27,6 +33,18 @@ def profile(request: Request):
 @router.put("/me/profile", response_model=ProfileOut, dependencies=[Depends(check_csrf)])
 def edit_profile(data: ProfileUpdate, request: Request):
     return update_profile(request.state.db, get_actor(request), data)
+
+
+@router.post("/me/onboarding/complete", status_code=204, dependencies=[Depends(check_csrf)])
+def complete_onboarding(request: Request):
+    actor = get_actor(request)
+    db = request.state.db
+    db.scalar(select(User).where(User.id == actor.user_id).with_for_update())
+    profile = get_profile(db, actor.user_id)
+    if not profile or not profile.degree_id or not profile.graduation_year:
+        raise DomainError("incomplete_profile", "Complete your academic details first.", 409)
+    if profile.onboarding_completed_at is None:
+        profile.onboarding_completed_at = utcnow()
 
 
 @router.get("/skills")

@@ -42,24 +42,47 @@ function Onboarding() {
     if (step > 1) heading.current?.focus();
   }, [step]);
   useEffect(() => {
-    Promise.all([
-      api<Profile>("/me/profile"),
-      api<Skill[]>("/skills"),
-      api<{ skill_id: string }[]>("/me/skills"),
-      api<{ items: FileEntry[] }>("/me/files"),
-    ])
-      .then(([p, catalog, chosen, uploads]) => {
-        if (p.degree_id && p.graduation_year && search.get("edit") !== "1") {
+    const controller = new AbortController();
+    const options = { signal: controller.signal };
+    const editing = search.get("edit") === "1";
+    async function load() {
+      try {
+        const p = await api<Profile>("/me/profile", options);
+        if (controller.signal.aborted) return;
+        if (p.onboarding_complete && !editing) {
           router.replace("/workspace");
           return;
         }
+        const [catalog, chosen, uploads] = await Promise.all([
+          api<Skill[]>("/skills", options),
+          api<{ skill_id: string }[]>("/me/skills", options),
+          api<{ items: FileEntry[] }>("/me/files", options),
+        ]);
+        if (controller.signal.aborted) return;
         setProfile(p);
         setSkills(catalog);
         setSelected(chosen.map((s) => s.skill_id));
         setFiles(uploads.items);
-      })
-      .catch((e) => setError(e.message));
+        if (!editing && p.degree_id && p.graduation_year) setStep(2);
+      } catch (failure) {
+        if (!controller.signal.aborted) setError((failure as Error).message);
+      }
+    }
+    void load();
+    return () => controller.abort();
   }, [router, search]);
+
+  async function finish() {
+    setBusy(true);
+    setError("");
+    try {
+      await api("/me/onboarding/complete", { method: "POST" });
+      router.replace("/workspace");
+    } catch (failure) {
+      setError((failure as Error).message);
+      setBusy(false);
+    }
+  }
   async function academics(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -163,6 +186,18 @@ function Onboarding() {
       setBusy(false);
     }
   }
+  if (!profile) {
+    return (
+      <main id="main" className="workspace">
+        {error ? (
+          <p role="alert">{error}</p>
+        ) : (
+          <p role="status">Loading your workspace…</p>
+        )}
+      </main>
+    );
+  }
+
   return (
     <main id="main" className="onboarding">
       <aside className="onboarding-guide" aria-label="Setup progress">
@@ -230,13 +265,7 @@ function Onboarding() {
             {error}
           </p>
         )}
-        {!profile ? (
-          <p role="status">
-            {error
-              ? "Refresh this page to try again."
-              : "Loading your profile…"}
-          </p>
-        ) : step === 1 ? (
+        {step === 1 ? (
           <form onSubmit={academics}>
             <p className="form-note">
               All fields are required unless marked optional.
@@ -436,11 +465,7 @@ function Onboarding() {
               <button disabled={busy} onClick={() => setStep(2)}>
                 Back
               </button>
-              <button
-                className="button"
-                disabled={busy}
-                onClick={() => router.replace("/workspace")}
-              >
+              <button className="button" disabled={busy} onClick={finish}>
                 Go to my workspace
               </button>
             </div>

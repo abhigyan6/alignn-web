@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     clerk_secret_key: SecretStr | None = None
     clerk_jwt_key: str | None = None
     database_url: str
+    retired_event_evidence_retention_days: int = Field(default=180, ge=30)
     database_pool_size: int = Field(default=12, ge=1, le=100)
     database_max_overflow: int = Field(default=100, ge=0, le=100)
     database_pool_timeout: int = Field(default=30, ge=1, le=120)
@@ -60,7 +61,9 @@ class Settings(BaseSettings):
             if self.object_driver != "s3" or not self.object_region:
                 raise ValueError("IAM object storage requires S3 and an explicit AWS region")
             if self.object_endpoint or self.object_access_key or self.object_secret_key:
-                raise ValueError("IAM object storage uses native AWS endpoints and role credentials")
+                raise ValueError(
+                    "IAM object storage uses native AWS endpoints and role credentials"
+                )
         if self.environment == "production":
             if self.auth_provider == "clerk" and not self.clerk_secret_key:
                 raise ValueError("Clerk authentication requires a secret key")
@@ -71,9 +74,8 @@ class Settings(BaseSettings):
             if not all(
                 (
                     self.mail_host,
-                    self.object_auth_mode == "iam" or all(
-                        (self.object_endpoint, self.object_access_key, self.object_secret_key)
-                    ),
+                    self.object_auth_mode == "iam"
+                    or all((self.object_endpoint, self.object_access_key, self.object_secret_key)),
                     self.scanner_host,
                 )
             ):

@@ -21,12 +21,16 @@ export default function Explore() {
     [rank, setRank] = useState(""),
     [next, setNext] = useState<number | null>(null),
     [cursor, setCursor] = useState(0),
-    [attempt, setAttempt] = useState(0);
+    [attempt, setAttempt] = useState(0),
+    [polls, setPolls] = useState(0);
   useEffect(() => {
-    if (rank !== "PENDING" || sort !== "match") return;
-    const timer = setTimeout(() => setAttempt((value) => value + 1), 5000);
+    if (rank !== "PENDING" || sort !== "match" || polls >= 6) return;
+    const timer = setTimeout(() => {
+      setPolls((value) => value + 1);
+      setAttempt((value) => value + 1);
+    }, 5000);
     return () => clearTimeout(timer);
-  }, [rank, sort, attempt]);
+  }, [rank, sort, attempt, polls]);
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -160,10 +164,24 @@ export default function Explore() {
               </select>
             </label>
           </div>
-          {rank === "PENDING" && (
+          {rank === "PENDING" && polls < 6 && (
             <p role="status">
               Your match ranking is being calculated. Showing newest
               opportunities for now.
+            </p>
+          )}
+          {(rank === "UNAVAILABLE" || (rank === "PENDING" && polls >= 6)) && (
+            <p role="status">
+              Matching is temporarily unavailable. Showing newest opportunities.{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setPolls(0);
+                  setAttempt((value) => value + 1);
+                }}
+              >
+                Check ranking again
+              </button>
             </p>
           )}
           {rank === "SIGN_IN_REQUIRED" && (
@@ -196,11 +214,7 @@ export default function Explore() {
                     <small>{o.kind.replaceAll("_", " ").toLowerCase()}</small>
                   </div>
                   <div className="event-body">
-                    <span className="mode">
-                      {o.mode === "EXTERNAL"
-                        ? "Apply externally"
-                        : "Hosted on Alignn"}
-                    </span>
+                    <span className="mode">Apply externally</span>
                     <h3>{o.title}</h3>
                     <p>
                       {o.location} · {o.work_mode.toLowerCase()}

@@ -8,9 +8,8 @@ from uuid import UUID, uuid4
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from alignn.domains.files.models import ConsentGrant, PrivateFile
+from alignn.domains.files.models import PrivateFile
 from alignn.domains.identity.schemas import Actor
-from alignn.domains.organizations.models import Membership
 from alignn.errors import DomainError
 
 
@@ -30,30 +29,10 @@ def authorize_file(
     db: Session,
     actor: Actor,
     file_id: UUID,
-    purpose: str = "download",
-    opportunity_id: UUID | None = None,
 ) -> FileGrant:
     file = db.get(PrivateFile, file_id)
-    if not file:
+    if not file or file.owner_id != actor.user_id or file.purpose != "resume":
         raise DomainError("not_found", "File not found.", 404)
-    if file.owner_id != actor.user_id:
-        permission = db.scalar(
-            select(ConsentGrant)
-            .join(Membership, Membership.organization_id == ConsentGrant.organization_id)
-            .where(
-                ConsentGrant.file_id == file.id,
-                ConsentGrant.opportunity_id == opportunity_id,
-                ~ConsentGrant.revoked,
-                Membership.user_id == actor.user_id,
-                Membership.role.in_(["OWNER", "MANAGER"]),
-            )
-        )
-        if not permission:
-            raise DomainError("not_found", "File not found.", 404)
-    if file.owner_id != actor.user_id:
-        from alignn.domains.organizations.service import require_verified_organization
-
-        require_verified_organization(db, permission.organization_id)
     if file.scan_status != "CLEAN":
         raise DomainError("file_not_ready", "This file has not passed its safety checks.", 409)
     return FileGrant(file, actor.user_id)
@@ -63,25 +42,20 @@ def content_type(data: bytes, filename: str) -> str | None:
     suffix = Path(filename).suffix.lower()
     if suffix == ".pdf" and data.startswith(b"%PDF-"):
         return "application/pdf"
-    if suffix in {".docx", ".pptx", ".zip"} and zipfile.is_zipfile(io.BytesIO(data)):
-        if suffix == ".zip":
-            return "application/zip"
+    if suffix == ".docx" and zipfile.is_zipfile(io.BytesIO(data)):
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             names = set(archive.namelist())
-            required = "word/document.xml" if suffix == ".docx" else "ppt/presentation.xml"
-            if "[Content_Types].xml" in names and required in names:
-                return (
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    if suffix == ".docx"
-                    else "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                )
+            if {"[Content_Types].xml", "word/document.xml"} <= names:
+                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     return None
 
 
 def verify_upload(db: Session, file_id: UUID, adapters) -> ScanResult:
     file = db.scalar(select(PrivateFile).where(PrivateFile.id == file_id).with_for_update())
-    if not file or file.scan_status == "CLEAN":
-        return ScanResult(bool(file), "already_processed")
+    if not file or file.purpose != "resume":
+        return ScanResult(False, "not_a_resume")
+    if file.scan_status == "CLEAN":
+        return ScanResult(True, "already_processed")
     if file.scan_status not in {"UPLOADED", "SCAN_ERROR"}:
         return ScanResult(False, "not_uploaded")
     with adapters.objects.open(file.object_key) as stream:

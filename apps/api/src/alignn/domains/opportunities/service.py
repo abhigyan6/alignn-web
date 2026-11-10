@@ -1,10 +1,13 @@
+from datetime import timedelta
+
 from sqlalchemy import func, or_, select
 
 from alignn.db import utcnow
 from alignn.domains.identity.service import require_verified
-from alignn.domains.organizations.service import require_membership
+from alignn.domains.organizations.service import lock_organization, require_membership
 from alignn.domains.profiles.models import Profile
 from alignn.errors import DomainError
+from alignn.jobs.models import Job
 
 from .models import MatchSnapshot, Opportunity
 from .schemas import OpportunityOut
@@ -12,14 +15,14 @@ from .schemas import OpportunityOut
 
 def lock_opportunity(db, id):
     o = db.scalar(select(Opportunity).where(Opportunity.id == id).with_for_update())
-    if not o:
+    if not o or o.mode != "EXTERNAL":
         raise DomainError("not_found", "Opportunity not found.", 404)
     return o
 
 
 def visible(db, actor, id):
     o = db.get(Opportunity, id)
-    if not o:
+    if not o or o.mode != "EXTERNAL":
         raise DomainError("not_found", "Opportunity not found.", 404)
     if o.status != "PUBLISHED":
         if actor is None:
@@ -42,28 +45,12 @@ def mutate_opportunity(db, actor, opportunity_id, expected_version, data):
     if o.version != expected_version:
         raise DomainError("stale_version", "Reload the latest opportunity.", 409)
     validate_skills(db, data)
-    if o.admission_started:
-        if (
-            o.mode != data.mode
-            or o.eligibility != data.eligibility.model_dump(mode="json")
-            or o.team_min != data.team_min
-            or o.team_max != data.team_max
-        ):
-            raise DomainError(
-                "policy_locked",
-                "Admission policy and team size are locked after registration begins.",
-                409,
-            )
-        if data.capacity < o.capacity_used:
-            raise DomainError(
-                "capacity_conflict", "Capacity cannot be below confirmed registrations.", 409
-            )
-        if data.registration_closes_at < o.registration_closes_at:
-            raise DomainError(
-                "deadline_locked",
-                "Registration close cannot be brought forward after admission starts.",
-                409,
-            )
+    if o.status == "PUBLISHED" and not lock_organization(db, o.organization_id).verified:
+        raise DomainError(
+            "organization_unverified",
+            "Verify your organization before editing published listings.",
+            409,
+        )
     if data.registration_closes_at != o.registration_closes_at:
         o.deadline_version += 1
     for k, v in data.model_dump(mode="python").items():
@@ -76,6 +63,7 @@ def mutate_opportunity(db, actor, opportunity_id, expected_version, data):
 def search_opportunities(db, actor, query):
     base = select(Opportunity).where(
         Opportunity.status == "PUBLISHED",
+        Opportunity.mode == "EXTERNAL",
         or_(
             Opportunity.registration_closes_at.is_(None),
             Opportunity.registration_closes_at > utcnow(),
@@ -87,8 +75,6 @@ def search_opportunities(db, actor, query):
         )
     if query.kind:
         base = base.where(Opportunity.kind == query.kind)
-    if query.mode:
-        base = base.where(Opportunity.mode == query.mode)
     status = "NOT_REQUESTED"
     sort = query.sort
     if sort == "match" and actor:
@@ -117,15 +103,30 @@ def search_opportunities(db, actor, query):
         else:
             from alignn.jobs.worker import enqueue_job
 
-            enqueue_job(
-                db,
-                kind="rank_profile",
-                key=f"rank-{actor.user_id}-{revision}-{db.scalar(select(func.max(Opportunity.created_at)))}-{db.scalar(select(func.sum(Opportunity.version)))}",
-                payload={"user_id": str(actor.user_id)},
-                run_at=utcnow(),
-                expires_at=None,
+            catalog = select(func.max(Opportunity.created_at), func.sum(Opportunity.version)).where(
+                Opportunity.mode == "EXTERNAL", Opportunity.status == "PUBLISHED"
             )
-            status = "PENDING"
+            newest, version_sum = db.execute(catalog).one()
+            key = f"rank-{actor.user_id}-{revision}-{newest}-{version_sum}"
+            now = utcnow()
+            first = db.scalar(select(Job).where(Job.key == key))
+            if first is not None and first.status in {"FAILED", "SKIPPED"}:
+                if first.run_at > now - timedelta(minutes=5):
+                    status = "UNAVAILABLE"
+                    key = None
+                else:
+                    key += "-retry"
+            if key:
+                job_id = enqueue_job(
+                    db,
+                    kind="rank_profile",
+                    key=key,
+                    payload={"user_id": str(actor.user_id)},
+                    run_at=now,
+                    expires_at=None,
+                )
+                job = db.get(Job, job_id)
+                status = "PENDING" if job.status in {"QUEUED", "RUNNING"} else "UNAVAILABLE"
             sort = "newest"
     elif sort == "match":
         status = "SIGN_IN_REQUIRED"

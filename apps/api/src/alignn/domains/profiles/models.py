@@ -29,6 +29,7 @@ class Profile(Record, Base):
     preferred_locations: Mapped[list] = mapped_column(JSONB, default=list)
     bio: Mapped[str | None] = mapped_column(String(1000))
     discoverable: Mapped[bool] = mapped_column(default=False)
+    onboarding_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revision: Mapped[int] = mapped_column(default=1)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 

@@ -10,11 +10,10 @@ from starlette.concurrency import run_in_threadpool
 
 from alignn.adapters.objects import LocalObjects, configured_objects
 from alignn.db import utcnow
-from alignn.domains.files.models import ConsentGrant, DownloadTicket, PrivateFile
-from alignn.domains.files.schemas import FileInit, GrantCreate
+from alignn.domains.files.models import DownloadTicket, PrivateFile
+from alignn.domains.files.schemas import FileInit
 from alignn.domains.files.service import authorize_file
 from alignn.domains.identity.service import check_csrf, digest, get_actor, limit
-from alignn.domains.opportunities.service import visible
 from alignn.errors import DomainError
 from alignn.jobs.worker import enqueue_job
 
@@ -26,7 +25,7 @@ def my_files(request: Request):
     actor = get_actor(request)
     rows = request.state.db.scalars(
         select(PrivateFile)
-        .where(PrivateFile.owner_id == actor.user_id)
+        .where(PrivateFile.owner_id == actor.user_id, PrivateFile.purpose == "resume")
         .order_by(PrivateFile.created_at.desc())
         .limit(100)
     ).all()
@@ -80,7 +79,11 @@ def owned_pending(request, id):
     actor = get_actor(request)
     file = request.state.db.scalar(
         select(PrivateFile)
-        .where(PrivateFile.id == id, PrivateFile.owner_id == actor.user_id)
+        .where(
+            PrivateFile.id == id,
+            PrivateFile.owner_id == actor.user_id,
+            PrivateFile.purpose == "resume",
+        )
         .with_for_update()
     )
     if not file:
@@ -157,9 +160,9 @@ def complete_upload(id: UUID, request: Request):
 
 
 @router.get("/me/files/{id}/download")
-def download(id: UUID, request: Request, opportunity_id: UUID | None = None):
+def download(id: UUID, request: Request):
     actor = get_actor(request)
-    file = authorize_file(request.state.db, actor, id, opportunity_id=opportunity_id).file
+    file = authorize_file(request.state.db, actor, id).file
     objects = configured_objects(request.app.state.settings)
     if not isinstance(objects, LocalObjects):
         return {"url": objects.download_url(file.object_key, file.filename), "expires_in": 300}
@@ -167,7 +170,6 @@ def download(id: UUID, request: Request, opportunity_id: UUID | None = None):
     request.state.db.add(
         DownloadTicket(
             file_id=id,
-            opportunity_id=opportunity_id,
             actor_id=actor.user_id,
             token_hash=digest(token),
             expires_at=utcnow() + timedelta(minutes=5),
@@ -189,7 +191,7 @@ def content(id: UUID, request: Request, ticket: str = Query(max_length=200)):
     )
     if not grant:
         raise DomainError("not_found", "This download link is no longer available.", 404)
-    file = authorize_file(request.state.db, actor, id, opportunity_id=grant.opportunity_id).file
+    file = authorize_file(request.state.db, actor, id).file
     objects = configured_objects(request.app.state.settings)
     if not isinstance(objects, LocalObjects):
         raise DomainError("not_found", "Use the private storage download link.", 404)
@@ -199,45 +201,3 @@ def content(id: UUID, request: Request, ticket: str = Query(max_length=200)):
         media_type="application/octet-stream",
         content_disposition_type="attachment",
     )
-
-
-@router.post("/me/files/{id}/grants", dependencies=[Depends(check_csrf)])
-def grant_consent(id: UUID, data: GrantCreate, request: Request):
-    actor = get_actor(request)
-    db = request.state.db
-    file = db.get(PrivateFile, id)
-    if not file or file.owner_id != actor.user_id:
-        raise DomainError("not_found", "File not found.", 404)
-    opportunity = visible(db, actor, data.opportunity_id)
-    if file.purpose != "resume":
-        raise DomainError(
-            "invalid_grant", "Only a resume can be shared through this consent flow.", 422
-        )
-    grant = db.scalar(
-        select(ConsentGrant).where(
-            ConsentGrant.file_id == id, ConsentGrant.opportunity_id == data.opportunity_id
-        )
-    )
-    if grant:
-        grant.revoked = False
-    else:
-        grant = ConsentGrant(
-            file_id=id,
-            opportunity_id=opportunity.id,
-            owner_id=actor.user_id,
-            organization_id=opportunity.organization_id,
-        )
-        db.add(grant)
-        db.flush()
-    return {"id": grant.id, "opportunity_id": grant.opportunity_id, "revoked": False}
-
-
-@router.delete("/me/file-grants/{id}", status_code=204, dependencies=[Depends(check_csrf)])
-def revoke_consent(id: UUID, request: Request):
-    actor = get_actor(request)
-    grant = request.state.db.scalar(
-        select(ConsentGrant).where(ConsentGrant.id == id, ConsentGrant.owner_id == actor.user_id)
-    )
-    if not grant:
-        raise DomainError("not_found", "Consent grant not found.", 404)
-    grant.revoked = True

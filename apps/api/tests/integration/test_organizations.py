@@ -62,6 +62,13 @@ def test_invitation_expires_and_only_recipient_accepts(make_user, api_client):
     owner = api_client(make_user(verified=True))
     invited = make_user(verified=True)
     org = create_org(owner)
+    admin = api_client(make_user(verified=True, admin=True))
+    assert (
+        admin.post(
+            f"/api/v1/admin/organizations/{org['id']}/verify", json={"reason": "Verified publisher"}
+        ).status_code
+        == 200
+    )
     invitation = owner.post(
         "/api/v1/organizations/" + org["id"] + "/invitations",
         json={"email": invited.email, "role": "REVIEWER"},

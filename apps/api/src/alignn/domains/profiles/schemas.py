@@ -73,6 +73,7 @@ class ProfileOut(ProfileUpdate):
     user_id: UUID
     full_name: str
     revision: int
+    onboarding_complete: bool
 
 
 class SkillInput(StrictModel):

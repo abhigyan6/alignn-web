@@ -17,13 +17,18 @@ def profile_out(db, actor: Actor) -> ProfileOut:
     profile = get_profile(db, actor.user_id)
     user = db.get(User, actor.user_id)
     if not profile:
-        return ProfileOut(user_id=user.id, full_name=user.full_name, revision=0)
+        return ProfileOut(
+            user_id=user.id, full_name=user.full_name, revision=0, onboarding_complete=False
+        )
     fields = {key: getattr(profile, key) for key in ProfileUpdate.model_fields}
     return ProfileOut(
         id=profile.id,
         user_id=user.id,
         full_name=user.full_name,
         revision=profile.revision,
+        onboarding_complete=bool(
+            profile.onboarding_completed_at and profile.degree_id and profile.graduation_year
+        ),
         **fields,
     )
 

@@ -1,6 +1,8 @@
 import logging
+from pathlib import Path
 from uuid import uuid4
 
+from alembic.script import ScriptDirectory
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -15,9 +17,7 @@ from alignn.domains.files.router import router as files_router
 from alignn.domains.identity.router import router as identity_router
 from alignn.domains.opportunities.router import router as opportunities_router
 from alignn.domains.organizations.router import router as organizations_router
-from alignn.domains.participation.router import router as participation_router
 from alignn.domains.profiles.router import router as profiles_router
-from alignn.domains.teams.router import router as teams_router
 from alignn.errors import DomainError
 from alignn.jobs.router import router as jobs_router
 
@@ -32,6 +32,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         docs_url=None if config.environment == "production" else "/docs",
     )
     app.state.settings = config
+    migrations = Path(__file__).resolve().parents[2] / "migrations"
+    expected_revisions = set(ScriptDirectory(str(migrations)).get_heads())
 
     @app.middleware("http")
     async def transactions(request: Request, call_next):
@@ -112,18 +114,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/ready")
     def ready(request: Request):
         try:
-            request.state.db.execute(text("SELECT version_num FROM alembic_version LIMIT 1"))
-            return {"status": "ready"}
+            revisions = set(
+                request.state.db.scalars(text("SELECT version_num FROM alembic_version"))
+            )
+            if expected_revisions and revisions == expected_revisions:
+                return {"status": "ready"}
         except Exception:
-            return JSONResponse(status_code=503, content={"status": "unavailable"})
+            pass
+        return JSONResponse(status_code=503, content={"status": "unavailable"})
 
     app.include_router(identity_router)
     app.include_router(jobs_router)
     app.include_router(profiles_router)
     app.include_router(organizations_router)
     app.include_router(files_router)
-    app.include_router(teams_router)
-    app.include_router(participation_router)
     app.include_router(opportunities_router)
     app.include_router(applications_router)
     return app

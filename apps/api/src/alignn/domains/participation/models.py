@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from alignn.db import Base, Record
+from alignn.domains.teams import models as archived_teams  # noqa: F401
 
 
 class Registration(Record, Base):

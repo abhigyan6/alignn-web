@@ -13,16 +13,13 @@ class OpportunityCreate(StrictModel):
     title: str = Field(min_length=3, max_length=180)
     description: str = Field(min_length=10, max_length=20000)
     kind: Literal["HACKATHON", "COMPETITION", "INTERNSHIP", "JOB", "WORKSHOP", "SCHOLARSHIP"]
-    mode: Literal["HOSTED", "EXTERNAL"]
-    apply_url: str | None = Field(None, max_length=1000)
+    mode: Literal["EXTERNAL"] = "EXTERNAL"
+    apply_url: str = Field(max_length=1000)
     location: str = Field("Remote", max_length=160)
     work_mode: Literal["REMOTE", "HYBRID", "ONSITE"] = "REMOTE"
     registration_closes_at: datetime | None = None
     starts_at: datetime | None = None
     ends_at: datetime | None = None
-    capacity: int = Field(100, ge=1, le=100000)
-    team_min: int = Field(1, ge=1, le=20)
-    team_max: int = Field(1, ge=1, le=20)
     eligibility: EligibilityPolicy = Field(default_factory=EligibilityPolicy)
     required_skills: list[str] = Field(default_factory=list, max_length=40)
     preferred_skills: list[str] = Field(default_factory=list, max_length=40)
@@ -43,22 +40,12 @@ class OpportunityCreate(StrictModel):
 
     @model_validator(mode="after")
     def valid(self):
-        if self.mode == "HOSTED" and not all(
-            (self.registration_closes_at, self.starts_at, self.ends_at)
-        ):
-            raise ValueError("Hosted events require registration, start and end dates")
         if (
             self.registration_closes_at
             and self.starts_at
             and self.registration_closes_at > self.starts_at
         ) or (self.starts_at and self.ends_at and self.starts_at > self.ends_at):
             raise ValueError("Registration, start and end must be in order")
-        if self.team_min > self.team_max:
-            raise ValueError("Team minimum exceeds maximum")
-        if self.mode == "EXTERNAL" and not self.apply_url:
-            raise ValueError("External opportunities need an HTTPS apply link")
-        if self.mode == "HOSTED" and self.kind in {"JOB", "INTERNSHIP"}:
-            raise ValueError("Jobs and internships use external applications")
         return self
 
 
@@ -70,7 +57,6 @@ class OpportunityOut(OpportunityCreate):
     status: str
     version: int
     deadline_version: int
-    capacity_used: int
     created_at: datetime
     source_name: str | None = None
     source_url: str | None = None
@@ -88,7 +74,7 @@ class OpportunityMutation(VersionCommand):
 class SearchQuery(StrictModel):
     q: str = Field("", max_length=200)
     kind: str | None = None
-    mode: str | None = None
+    mode: Literal["EXTERNAL"] | None = None
     sort: Literal["deadline", "newest", "match"] = "deadline"
     limit: int = Field(20, ge=1, le=100)
     cursor: int = Field(0, ge=0, le=1000000)

@@ -8,7 +8,7 @@ from alignn.domains.eligibility.service import evaluate, profile_evidence
 from alignn.domains.identity.service import check_csrf, get_actor, require_verified
 from alignn.domains.matching.service import calculate_fit
 from alignn.domains.organizations.models import Membership, Organization
-from alignn.domains.organizations.service import require_membership
+from alignn.domains.organizations.service import lock_organization, require_membership
 from alignn.errors import DomainError
 
 from .models import Opportunity, SavedOpportunity
@@ -52,7 +52,11 @@ def owned(request: Request):
     rows = db.scalars(
         select(Opportunity)
         .join(Membership, Membership.organization_id == Opportunity.organization_id)
-        .where(Membership.user_id == actor.user_id, Membership.role.in_(["OWNER", "MANAGER"]))
+        .where(
+            Membership.user_id == actor.user_id,
+            Membership.role.in_(["OWNER", "MANAGER"]),
+            Opportunity.mode == "EXTERNAL",
+        )
         .order_by(Opportunity.created_at.desc())
         .limit(100)
     ).all()
@@ -100,7 +104,8 @@ def publish(id: UUID, data: VersionCommand, request: Request):
     db = request.state.db
     o = lock_opportunity(db, id)
     require_membership(db, actor, o.organization_id, "manage")
-    if not db.get(Organization, o.organization_id).verified:
+    organization = lock_organization(db, o.organization_id)
+    if not organization.verified:
         raise DomainError(
             "organization_unverified", "Your organization must be verified before publishing.", 409
         )
@@ -110,8 +115,9 @@ def publish(id: UUID, data: VersionCommand, request: Request):
         raise DomainError("invalid_state", "Only a draft can be published.", 409)
     from alignn.db import utcnow
 
-    if o.registration_closes_at <= utcnow():
+    if o.registration_closes_at is not None and o.registration_closes_at <= utcnow():
         raise DomainError("deadline_passed", "Registration close must be in the future.", 409)
+    o.organization_name = organization.name
     o.status = "PUBLISHED"
     o.version += 1
     return o
@@ -137,7 +143,11 @@ def eligibility(id: UUID, request: Request):
     db = request.state.db
     o = visible(db, actor, id)
     if o.source_name:
-        raise DomainError("eligibility_unstructured", "Check eligibility requirements on the original listing.", 409)
+        raise DomainError(
+            "eligibility_unstructured",
+            "Check eligibility requirements on the original listing.",
+            409,
+        )
     return {
         **evaluate(
             profile_evidence(db, actor), EligibilityPolicy.model_validate(o.eligibility)
@@ -186,7 +196,11 @@ def saved(request: Request):
     rows = db.scalars(
         select(Opportunity)
         .join(SavedOpportunity)
-        .where(SavedOpportunity.user_id == actor.user_id, Opportunity.status == "PUBLISHED")
+        .where(
+            SavedOpportunity.user_id == actor.user_id,
+            Opportunity.status == "PUBLISHED",
+            Opportunity.mode == "EXTERNAL",
+        )
         .order_by(Opportunity.registration_closes_at)
         .limit(100)
     ).all()

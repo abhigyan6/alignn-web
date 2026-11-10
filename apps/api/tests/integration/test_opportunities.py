@@ -4,18 +4,18 @@ from uuid import UUID
 from alignn.db import SessionLocal, utcnow
 
 
-def create_event(c, org_id, **changes):
+def create_listing(c, org_id, **changes):
     r = c.post(
         "/api/v1/organizations/" + org_id + "/opportunities",
         json={
             "title": "Build for tomorrow",
             "description": "A thoughtful student hackathon.",
             "kind": "HACKATHON",
-            "mode": "HOSTED",
+            "mode": "EXTERNAL",
+            "apply_url": "https://example.com/apply",
             "registration_closes_at": (utcnow() + timedelta(days=10)).isoformat(),
             "starts_at": (utcnow() + timedelta(days=11)).isoformat(),
             "ends_at": (utcnow() + timedelta(days=12)).isoformat(),
-            "capacity": 100,
             **changes,
         },
     )
@@ -27,7 +27,7 @@ def test_drafts_private_and_organization_verification_required(make_user, api_cl
     c = api_client(make_user(verified=True))
     anon = api_client()
     org = c.post("/api/v1/organizations", json={"name": "Builders Society"}).json()
-    o = create_event(c, org["id"])
+    o = create_listing(c, org["id"])
     assert anon.get("/api/v1/opportunities/" + o["id"]).status_code == 404
     assert (
         c.post(
@@ -54,7 +54,7 @@ def test_external_tracker_is_user_scoped(make_user, api_client):
     c = api_client(make_user(verified=True))
     other = api_client(make_user(verified=True))
     org = c.post("/api/v1/organizations", json={"name": "Builders Society"}).json()
-    o = create_event(c, org["id"], mode="EXTERNAL", apply_url="https://example.com/apply")
+    o = create_listing(c, org["id"], mode="EXTERNAL", apply_url="https://example.com/apply")
     from alignn.domains.organizations.models import Organization
 
     with SessionLocal.begin() as db:
@@ -95,32 +95,3 @@ def test_match_ranking_is_global_and_profile_changes_invalidate_it(
     c.put("/api/v1/me/profile", json={"bio": "Updated evidence"})
     page = c.get("/api/v1/opportunities?sort=match&limit=1").json()
     assert page["ranking_status"] == "PENDING" and page["sort"] == "newest"
-
-
-def test_resume_grants_are_event_scoped_and_revocable(
-    make_user, api_client, make_organization, make_opportunity
-):
-    from alignn.domains.files.models import PrivateFile
-
-    owner = make_user(verified=True)
-    organizer = make_user(verified=True)
-    c = api_client(owner)
-    o = api_client(organizer)
-    org = make_organization(organizer.id, verified=True)
-    event = make_opportunity(org.id)
-    other = make_opportunity(org.id)
-    f = c.post(
-        "/api/v1/me/files", json={"filename": "resume.pdf", "purpose": "resume", "size": 10}
-    ).json()
-    with SessionLocal.begin() as db:
-        db.get(PrivateFile, UUID(f["id"])).scan_status = "CLEAN"
-    grant = c.post(
-        "/api/v1/me/files/" + f["id"] + "/grants", json={"opportunity_id": str(event.id)}
-    )
-    assert grant.status_code == 200, grant.text
-    route = "/api/v1/me/files/" + f["id"] + "/download"
-    assert o.get(route).status_code == 404
-    assert o.get(route + "?opportunity_id=" + str(other.id)).status_code == 404
-    assert o.get(route + "?opportunity_id=" + str(event.id)).status_code == 200
-    c.delete("/api/v1/me/file-grants/" + grant.json()["id"])
-    assert o.get(route + "?opportunity_id=" + str(event.id)).status_code == 404

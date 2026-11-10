@@ -42,8 +42,6 @@ def create(data: ApplicationCreate, request: Request):
     actor = get_actor(request)
     db = request.state.db
     o = visible(db, actor, data.opportunity_id)
-    if o.mode != "EXTERNAL":
-        raise DomainError("hosted_event", "Use hosted registration for this event.", 409)
     a = db.scalar(
         select(Application).where(
             Application.user_id == actor.user_id, Application.opportunity_id == o.id

@@ -6,7 +6,7 @@ Alignn centers on profile-based opportunity discovery, explainable eligibility a
 
 ## Project status
 
-The architecture and marketplace design direction were approved on 3 November 2026. The backend currently implements identity, jobs, profiles, organizations, discovery, external tracking, teams and registration. A working Next.js discovery interface now connects to the API, with authentication, account-link handling, opportunity details and saved opportunities. This is an implementation checkpoint, not a completed product.
+The architecture and marketplace design direction were approved on 3 November 2026. The backend currently implements identity, jobs, profiles, organizations, discovery, and external application tracking. Alignn discovers events and links to their original organizers. Event hosting, teams and registration inside Alignn have been retired. A working Next.js discovery interface now connects to the API, with authentication, account-link handling, opportunity details and saved opportunities. This is an implementation checkpoint, not a completed product.
 
 The selected architecture is a Next.js web app, a FastAPI modular backend, a Python background worker and PostgreSQL. Resumes and submissions use private S3-compatible object storage.
 
@@ -16,6 +16,8 @@ The selected architecture is a Next.js web app, a FastAPI modular backend, a Pyt
 - [Implementation plan](docs/superpowers/plans/2026-11-03-alignn-implementation.md)
 - [Marketplace visual reference](docs/design/marketplace-concept.html)
 - [Source project assessment](docs/source-assessment.md)
+
+The hosting retirement keeps the historical database tables and records. The scheduler removes expired request replay rows and clears academic evidence from retired events after 180 days by default, measured from the later of event end and evidence creation. Set `RETIRED_EVENT_EVIDENCE_RETENTION_DAYS` to override the default. Run the latest migration before restarting the API and web together. Existing profiles with a degree and graduation year keep their workspace access. New profiles require explicit onboarding completion, and the private resume upload remains optional.
 
 The visual reference contains illustrative content and does not accept real registrations. The original repository, `Vaidik04/Alignn`, was inspected for workflow context. This is a fresh repository with independent history.
 

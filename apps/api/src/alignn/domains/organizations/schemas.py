@@ -37,6 +37,11 @@ class OrganizationUpdate(StrictModel):
     name: str | None = Field(None, min_length=2, max_length=180)
     description: str | None = Field(None, max_length=3000)
 
+    @field_validator("name", mode="before")
+    @classmethod
+    def trim_name(cls, value):
+        return OrganizationCreate.trim_name(value)
+
 
 class OrganizationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)

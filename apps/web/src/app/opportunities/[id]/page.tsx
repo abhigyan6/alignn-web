@@ -165,13 +165,9 @@ export default function Detail() {
               )}
             </article>
             <aside className="action-panel">
-              <p>
-                {o.mode === "EXTERNAL"
-                  ? "Apply on the organizer’s website"
-                  : "Hosted on Alignn"}
-              </p>
+              <p>Apply on the organizer’s website</p>
               <h2>Your next step</h2>
-              <p>Registration closes</p>
+              <p>Applications close</p>
               {o.registration_closes_at ? (
                 <time dateTime={o.registration_closes_at}>
                   {new Date(o.registration_closes_at).toLocaleString("en-GB", {
@@ -195,31 +191,22 @@ export default function Detail() {
                   . Listings may change; confirm details at the source.
                 </p>
               )}
-              {o.mode === "EXTERNAL" && o.apply_url ? (
-                <>
-                  <a
-                    className="button"
-                    href={o.apply_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Apply externally ↗
-                  </a>
-                  <button
-                    disabled={busy}
-                    onClick={() =>
-                      action("/applications", { opportunity_id: o.id })
-                    }
-                  >
-                    Track this application
-                  </button>
-                </>
-              ) : (
-                <p>
-                  Hosted registration will be available with the Phase 2 event
-                  workspace.
-                </p>
-              )}
+              <a
+                className="button"
+                href={o.apply_url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Apply externally ↗
+              </a>
+              <button
+                disabled={busy}
+                onClick={() =>
+                  action("/applications", { opportunity_id: o.id })
+                }
+              >
+                Track this application
+              </button>
               <button
                 disabled={busy}
                 onClick={() => action("/opportunities/" + id + "/save")}

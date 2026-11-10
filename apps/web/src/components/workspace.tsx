@@ -16,27 +16,32 @@ export default function Workspace() {
     Promise.all([
       api<User>("/me"),
       api<{ items: Opportunity[] }>("/me/saved"),
-      api<{ degree_id: string | null; graduation_year: number | null }>(
-        "/me/profile",
-      ),
+      api<{ onboarding_complete: boolean }>("/me/profile"),
     ])
       .then(([u, s, profile]) => {
-        if (!profile.degree_id || !profile.graduation_year) {
+        if (!profile.onboarding_complete) {
           router.replace("/onboarding");
           return;
         }
         setUser(u);
         setItems(s.items);
+        setLoading(false);
       })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      .catch((e) => {
+        setError(e.message);
+        setLoading(false);
+      });
   }, [router]);
+  if (loading)
+    return (
+      <main id="main" className="workspace">
+        <p role="status">Loading your workspace…</p>
+      </main>
+    );
   return (
     <main id="main" className="workspace">
       <h1>Your workspace</h1>
-      {loading ? (
-        <p role="status">Loading your workspace…</p>
-      ) : error ? (
+      {error ? (
         <div className="empty">
           <h2>Sign in to continue.</h2>
           <p role="alert">{error}</p>
@@ -49,8 +54,7 @@ export default function Workspace() {
           <p>{user?.full_name}, keep the opportunities that matter close.</p>
           {!user?.is_verified && (
             <p role="status">
-              Verify your email before joining hosted events or requesting an
-              organization.
+              Verify your email before requesting an organization.
             </p>
           )}
           <Link href="/onboarding?edit=1">Edit your profile ↗</Link>

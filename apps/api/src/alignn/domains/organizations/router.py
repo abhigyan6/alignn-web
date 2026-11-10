@@ -7,7 +7,13 @@ from sqlalchemy import select
 from alignn.audit import AuditRecord
 from alignn.db import utcnow
 from alignn.domains.identity.models import User
-from alignn.domains.identity.service import check_csrf, get_actor, require_admin, require_verified
+from alignn.domains.identity.service import (
+    check_csrf,
+    get_actor,
+    limit,
+    require_admin,
+    require_verified,
+)
 from alignn.domains.organizations.models import Membership, Organization, OrganizationInvitation
 from alignn.domains.organizations.schemas import (
     InvitationCreate,
@@ -78,9 +84,21 @@ def edit_organization(id: UUID, data: OrganizationUpdate, request: Request):
     db = request.state.db
     organization = lock_organization(db, id)
     require_membership(db, actor, id, "manage")
-    for key, value in data.model_dump(exclude_unset=True).items():
+    changes = data.model_dump(exclude_unset=True)
+    for key, value in changes.items():
         if value is None:
             raise DomainError("invalid_input", "Organization fields cannot be null.", 422)
+        if key == "name" and value != organization.name and organization.verified:
+            organization.verified = False
+            organization.verified_at = None
+            db.add(
+                AuditRecord(
+                    actor_id=actor.user_id,
+                    action="organization.verification_reset",
+                    object_id=str(id),
+                    reason="Organization name changed",
+                )
+            )
         setattr(organization, key, value)
     return organization
 
@@ -97,10 +115,14 @@ def members(id: UUID, request: Request):
 
 @router.post("/organizations/{id}/invitations", status_code=201, dependencies=[Depends(check_csrf)])
 def invite(id: UUID, data: InvitationCreate, request: Request):
-    actor = get_actor(request)
+    actor = require_verified(get_actor(request))
     db = request.state.db
-    lock_organization(db, id)
+    organization = lock_organization(db, id)
     require_membership(db, actor, id, "members")
+    if not organization.verified:
+        raise DomainError(
+            "organization_unverified", "Verify your organization before inviting members.", 403
+        )
     existing = db.scalar(
         select(OrganizationInvitation).where(
             OrganizationInvitation.organization_id == id,
@@ -111,6 +133,8 @@ def invite(id: UUID, data: InvitationCreate, request: Request):
     )
     if existing:
         raise DomainError("already_invited", "An active invitation already exists.", 409)
+    limit(db, "organization-invite-actor", str(actor.user_id), 5)
+    limit(db, "organization-invite-org", str(id), 5)
     invitation = OrganizationInvitation(
         organization_id=id,
         email=data.email,
@@ -179,7 +203,13 @@ def accept_invitation(id: UUID, request: Request):
     )
     if not invitation:
         raise DomainError("not_found", "Invitation not found.", 404)
-    lock_organization(db, invitation.organization_id)
+    organization = lock_organization(db, invitation.organization_id)
+    if not organization.verified:
+        raise DomainError(
+            "organization_unverified",
+            "This organization must be verified before you can join.",
+            403,
+        )
     db.refresh(invitation, with_for_update=True)
     if invitation.accepted or invitation.expires_at <= utcnow():
         raise DomainError("invitation_expired", "This invitation is no longer available.", 409)

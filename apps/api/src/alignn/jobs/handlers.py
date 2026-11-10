@@ -22,6 +22,26 @@ class Adapters:
 
 
 def deliver_mail(payload: dict, adapters: Adapters, key: str):
+    if key.startswith("organization-invite-"):
+        from uuid import UUID
+
+        from alignn.db import SessionLocal, utcnow
+        from alignn.domains.organizations.models import Organization, OrganizationInvitation
+
+        with SessionLocal() as db:
+            invitation = db.get(
+                OrganizationInvitation, UUID(key.removeprefix("organization-invite-"))
+            )
+            organization = db.get(Organization, invitation.organization_id) if invitation else None
+            if (
+                not invitation
+                or not organization
+                or not organization.verified
+                or invitation.accepted
+                or invitation.expires_at <= utcnow()
+                or payload.get("to") != invitation.email
+            ):
+                return
     adapters.mail.send(
         to=payload["to"], subject=payload["subject"], text=payload["text"], delivery_key=key
     )
@@ -57,7 +77,12 @@ def rank_profile(payload, adapters, key):
     rebuild_matches(UUID(payload["user_id"]))
 
 
+def retire_registration_notice(payload, adapters, key):
+    """Drain historical notice jobs without delivering email."""
+
+
 HANDLERS = {
+    "registration_notice": retire_registration_notice,
     "mail": deliver_mail,
     "scan_file": scan_file,
     "delete_object": delete_object,
@@ -67,6 +92,7 @@ HANDLERS = {
 
 def ingest_remotive(payload, adapters, key):
     from alignn.domains.opportunities.ingestion import sync_remotive
+
     sync_remotive()
 
 
@@ -78,27 +104,3 @@ def dispatch(kind: str, payload: dict, adapters: Adapters, key: str):
     if not handler:
         raise PermanentDeliveryError("unsupported_job")
     handler(payload, adapters, key)
-
-
-def registration_notice(payload, adapters, key):
-    from uuid import UUID
-
-    from alignn.db import SessionLocal
-    from alignn.domains.identity.models import User
-
-    with SessionLocal() as db:
-        user = db.get(User, UUID(payload["user_id"]))
-        if not user or not user.is_active:
-            return
-        email = user.email
-    adapters.mail.send(
-        to=email,
-        subject="Your Alignn registration is confirmed",
-        text="You are registered for "
-        + payload["title"]
-        + ". Open your Alignn workspace for next steps.",
-        delivery_key=key,
-    )
-
-
-HANDLERS["registration_notice"] = registration_notice

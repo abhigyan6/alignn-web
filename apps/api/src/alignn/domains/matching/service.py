@@ -73,9 +73,11 @@ def rebuild_matches(user_id):
     from alignn.db import SessionLocal
 
     with SessionLocal.begin() as db:
-        for o in db.scalars(select(Opportunity).where(Opportunity.status == "PUBLISHED")).yield_per(
-            100
-        ):
+        for o in db.scalars(
+            select(Opportunity).where(
+                Opportunity.status == "PUBLISHED", Opportunity.mode == "EXTERNAL"
+            )
+        ).yield_per(100):
             result = calculate_fit(db, user_id, o)
             values = dict(
                 user_id=user_id,

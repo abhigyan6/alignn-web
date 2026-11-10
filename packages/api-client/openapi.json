@@ -44,20 +44,6 @@
         "title": "ApplicationEventCreate",
         "type": "object"
       },
-      "ConsentUpdate": {
-        "additionalProperties": false,
-        "properties": {
-          "contact": {
-            "title": "Contact",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "contact"
-        ],
-        "title": "ConsentUpdate",
-        "type": "object"
-      },
       "EligibilityPolicy-Input": {
         "additionalProperties": false,
         "properties": {
@@ -182,10 +168,7 @@
             "type": "string"
           },
           "purpose": {
-            "enum": [
-              "resume",
-              "submission"
-            ],
+            "const": "resume",
             "title": "Purpose",
             "type": "string"
           },
@@ -201,21 +184,6 @@
           "size"
         ],
         "title": "FileInit",
-        "type": "object"
-      },
-      "GrantCreate": {
-        "additionalProperties": false,
-        "properties": {
-          "opportunity_id": {
-            "format": "uuid",
-            "title": "Opportunity Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "opportunity_id"
-        ],
-        "title": "GrantCreate",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -255,21 +223,6 @@
         "title": "InvitationCreate",
         "type": "object"
       },
-      "InviteCreate": {
-        "additionalProperties": false,
-        "properties": {
-          "email": {
-            "maxLength": 320,
-            "title": "Email",
-            "type": "string"
-          }
-        },
-        "required": [
-          "email"
-        ],
-        "title": "InviteCreate",
-        "type": "object"
-      },
       "Login": {
         "additionalProperties": false,
         "properties": {
@@ -295,23 +248,9 @@
         "additionalProperties": false,
         "properties": {
           "apply_url": {
-            "anyOf": [
-              {
-                "maxLength": 1000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Apply Url"
-          },
-          "capacity": {
-            "default": 100,
-            "maximum": 100000.0,
-            "minimum": 1.0,
-            "title": "Capacity",
-            "type": "integer"
+            "maxLength": 1000,
+            "title": "Apply Url",
+            "type": "string"
           },
           "description": {
             "maxLength": 20000,
@@ -361,10 +300,8 @@
             "type": "string"
           },
           "mode": {
-            "enum": [
-              "HOSTED",
-              "EXTERNAL"
-            ],
+            "const": "EXTERNAL",
+            "default": "EXTERNAL",
             "title": "Mode",
             "type": "string"
           },
@@ -414,20 +351,6 @@
             ],
             "title": "Starts At"
           },
-          "team_max": {
-            "default": 1,
-            "maximum": 20.0,
-            "minimum": 1.0,
-            "title": "Team Max",
-            "type": "integer"
-          },
-          "team_min": {
-            "default": 1,
-            "maximum": 20.0,
-            "minimum": 1.0,
-            "title": "Team Min",
-            "type": "integer"
-          },
           "title": {
             "maxLength": 180,
             "minLength": 3,
@@ -449,7 +372,7 @@
           "title",
           "description",
           "kind",
-          "mode"
+          "apply_url"
         ],
         "title": "OpportunityCreate",
         "type": "object"
@@ -477,27 +400,9 @@
         "additionalProperties": false,
         "properties": {
           "apply_url": {
-            "anyOf": [
-              {
-                "maxLength": 1000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Apply Url"
-          },
-          "capacity": {
-            "default": 100,
-            "maximum": 100000.0,
-            "minimum": 1.0,
-            "title": "Capacity",
-            "type": "integer"
-          },
-          "capacity_used": {
-            "title": "Capacity Used",
-            "type": "integer"
+            "maxLength": 1000,
+            "title": "Apply Url",
+            "type": "string"
           },
           "created_at": {
             "format": "date-time",
@@ -561,10 +466,8 @@
             "type": "string"
           },
           "mode": {
-            "enum": [
-              "HOSTED",
-              "EXTERNAL"
-            ],
+            "const": "EXTERNAL",
+            "default": "EXTERNAL",
             "title": "Mode",
             "type": "string"
           },
@@ -661,20 +564,6 @@
             "title": "Status",
             "type": "string"
           },
-          "team_max": {
-            "default": 1,
-            "maximum": 20.0,
-            "minimum": 1.0,
-            "title": "Team Max",
-            "type": "integer"
-          },
-          "team_min": {
-            "default": 1,
-            "maximum": 20.0,
-            "minimum": 1.0,
-            "title": "Team Min",
-            "type": "integer"
-          },
           "title": {
             "maxLength": 180,
             "minLength": 3,
@@ -700,14 +589,13 @@
           "title",
           "description",
           "kind",
-          "mode",
+          "apply_url",
           "id",
           "organization_id",
           "organization_name",
           "status",
           "version",
           "deadline_version",
-          "capacity_used",
           "created_at"
         ],
         "title": "OpportunityOut",
@@ -990,6 +878,10 @@
             ],
             "title": "Location"
           },
+          "onboarding_complete": {
+            "title": "Onboarding Complete",
+            "type": "boolean"
+          },
           "preferred_locations": {
             "anyOf": [
               {
@@ -1035,7 +927,8 @@
         "required": [
           "user_id",
           "full_name",
-          "revision"
+          "revision",
+          "onboarding_complete"
         ],
         "title": "ProfileOut",
         "type": "object"
@@ -1306,131 +1199,6 @@
         "title": "ProjectOut",
         "type": "object"
       },
-      "RegistrationCreate": {
-        "additionalProperties": false,
-        "properties": {
-          "contact_consent": {
-            "default": false,
-            "title": "Contact Consent",
-            "type": "boolean"
-          },
-          "resume_file_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Resume File Id"
-          },
-          "team_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Team Id"
-          }
-        },
-        "title": "RegistrationCreate",
-        "type": "object"
-      },
-      "RegistrationOut": {
-        "properties": {
-          "captain_id": {
-            "format": "uuid",
-            "title": "Captain Id",
-            "type": "string"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "eligibility_snapshot_id": {
-            "format": "uuid",
-            "title": "Eligibility Snapshot Id",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "opportunity_id": {
-            "format": "uuid",
-            "title": "Opportunity Id",
-            "type": "string"
-          },
-          "policy_version": {
-            "title": "Policy Version",
-            "type": "integer"
-          },
-          "request_id": {
-            "title": "Request Id",
-            "type": "string"
-          },
-          "roster": {
-            "items": {
-              "$ref": "#/components/schemas/RosterMemberOut"
-            },
-            "title": "Roster",
-            "type": "array"
-          },
-          "roster_user_ids": {
-            "items": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "title": "Roster User Ids",
-            "type": "array"
-          },
-          "status": {
-            "enum": [
-              "PENDING",
-              "CONFIRMED",
-              "WITHDRAWN",
-              "DISQUALIFIED"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "team_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Team Id"
-          }
-        },
-        "required": [
-          "id",
-          "opportunity_id",
-          "team_id",
-          "eligibility_snapshot_id",
-          "captain_id",
-          "status",
-          "roster_user_ids",
-          "roster",
-          "policy_version",
-          "created_at",
-          "request_id"
-        ],
-        "title": "RegistrationOut",
-        "type": "object"
-      },
       "ReplayRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1468,30 +1236,6 @@
           "password"
         ],
         "title": "ResetRequest",
-        "type": "object"
-      },
-      "RosterMemberOut": {
-        "properties": {
-          "full_name": {
-            "title": "Full Name",
-            "type": "string"
-          },
-          "profile_revision": {
-            "title": "Profile Revision",
-            "type": "integer"
-          },
-          "user_id": {
-            "format": "uuid",
-            "title": "User Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "user_id",
-          "full_name",
-          "profile_revision"
-        ],
-        "title": "RosterMemberOut",
         "type": "object"
       },
       "Signup": {
@@ -1565,22 +1309,6 @@
           "skills"
         ],
         "title": "SkillsUpdate",
-        "type": "object"
-      },
-      "TeamCreate": {
-        "additionalProperties": false,
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 2,
-            "title": "Name",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "title": "TeamCreate",
         "type": "object"
       },
       "TokenRequest": {
@@ -2365,42 +2093,6 @@
         ]
       }
     },
-    "/api/v1/me/file-grants/{id}": {
-      "delete": {
-        "operationId": "revoke_consent_api_v1_me_file_grants__id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Revoke Consent",
-        "tags": [
-          "Private files"
-        ]
-      }
-    },
     "/api/v1/me/files": {
       "get": {
         "operationId": "my_files_api_v1_me_files_get",
@@ -2511,23 +2203,6 @@
               "title": "Id",
               "type": "string"
             }
-          },
-          {
-            "in": "query",
-            "name": "opportunity_id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Opportunity Id"
-            }
           }
         ],
         "responses": {
@@ -2551,57 +2226,6 @@
           }
         },
         "summary": "Download",
-        "tags": [
-          "Private files"
-        ]
-      }
-    },
-    "/api/v1/me/files/{id}/grants": {
-      "post": {
-        "operationId": "grant_consent_api_v1_me_files__id__grants_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GrantCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Grant Consent",
         "tags": [
           "Private files"
         ]
@@ -2655,6 +2279,20 @@
         "summary": "Upload",
         "tags": [
           "Private files"
+        ]
+      }
+    },
+    "/api/v1/me/onboarding/complete": {
+      "post": {
+        "operationId": "complete_onboarding_api_v1_me_onboarding_complete_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Complete Onboarding",
+        "tags": [
+          "Profiles"
         ]
       }
     },
@@ -2818,25 +2456,6 @@
         ]
       }
     },
-    "/api/v1/me/registrations": {
-      "get": {
-        "operationId": "mine_api_v1_me_registrations_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Mine",
-        "tags": [
-          "Participation"
-        ]
-      }
-    },
     "/api/v1/me/saved": {
       "get": {
         "operationId": "saved_api_v1_me_saved_get",
@@ -2931,25 +2550,6 @@
         ]
       }
     },
-    "/api/v1/me/teams": {
-      "get": {
-        "operationId": "mine_api_v1_me_teams_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Mine",
-        "tags": [
-          "Teams"
-        ]
-      }
-    },
     "/api/v1/opportunities": {
       "get": {
         "operationId": "search_api_v1_opportunities_get",
@@ -2988,6 +2588,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "const": "EXTERNAL",
                   "type": "string"
                 },
                 {
@@ -3210,57 +2811,6 @@
         ]
       }
     },
-    "/api/v1/opportunities/{id}/consent": {
-      "put": {
-        "operationId": "consent_api_v1_opportunities__id__consent_put",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConsentUpdate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Consent",
-        "tags": [
-          "Participation"
-        ]
-      }
-    },
     "/api/v1/opportunities/{id}/eligibility": {
       "get": {
         "operationId": "eligibility_api_v1_opportunities__id__eligibility_get",
@@ -3396,70 +2946,6 @@
         ]
       }
     },
-    "/api/v1/opportunities/{id}/registrations": {
-      "post": {
-        "operationId": "create_api_v1_opportunities__id__registrations_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "idempotency-key",
-            "required": true,
-            "schema": {
-              "maxLength": 128,
-              "minLength": 8,
-              "title": "Idempotency-Key",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegistrationCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegistrationOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Create",
-        "tags": [
-          "Participation"
-        ]
-      }
-    },
     "/api/v1/opportunities/{id}/save": {
       "delete": {
         "operationId": "unsave_api_v1_opportunities__id__save_delete",
@@ -3532,57 +3018,6 @@
         "summary": "Save",
         "tags": [
           "Opportunities"
-        ]
-      }
-    },
-    "/api/v1/opportunities/{id}/teams": {
-      "post": {
-        "operationId": "create_api_v1_opportunities__id__teams_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TeamCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Create",
-        "tags": [
-          "Teams"
         ]
       }
     },
@@ -4049,47 +3484,6 @@
         ]
       }
     },
-    "/api/v1/organizer/opportunities/{id}/registrations": {
-      "get": {
-        "operationId": "organizer_api_v1_organizer_opportunities__id__registrations_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Organizer",
-        "tags": [
-          "Participation"
-        ]
-      }
-    },
     "/api/v1/people": {
       "get": {
         "operationId": "people_api_v1_people_get",
@@ -4144,47 +3538,6 @@
         ]
       }
     },
-    "/api/v1/registrations/{id}/withdraw": {
-      "post": {
-        "operationId": "withdrawal_api_v1_registrations__id__withdraw_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Withdrawal",
-        "tags": [
-          "Participation"
-        ]
-      }
-    },
     "/api/v1/skills": {
       "get": {
         "operationId": "catalog_api_v1_skills_get",
@@ -4201,281 +3554,6 @@
         "summary": "Catalog",
         "tags": [
           "Profiles"
-        ]
-      }
-    },
-    "/api/v1/team-invitations": {
-      "get": {
-        "operationId": "invitations_api_v1_team_invitations_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Invitations",
-        "tags": [
-          "Teams"
-        ]
-      }
-    },
-    "/api/v1/team-invitations/{id}/accept": {
-      "post": {
-        "operationId": "accept_api_v1_team_invitations__id__accept_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Accept",
-        "tags": [
-          "Teams"
-        ]
-      }
-    },
-    "/api/v1/team-invitations/{id}/decline": {
-      "post": {
-        "operationId": "decline_api_v1_team_invitations__id__decline_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Decline",
-        "tags": [
-          "Teams"
-        ]
-      }
-    },
-    "/api/v1/teams/{id}": {
-      "get": {
-        "operationId": "detail_api_v1_teams__id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Detail",
-        "tags": [
-          "Teams"
-        ]
-      }
-    },
-    "/api/v1/teams/{id}/invitations": {
-      "post": {
-        "operationId": "invite_api_v1_teams__id__invitations_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InviteCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Invite",
-        "tags": [
-          "Teams"
-        ]
-      }
-    },
-    "/api/v1/teams/{id}/invitations/{invitation_id}": {
-      "delete": {
-        "operationId": "revoke_invitation_api_v1_teams__id__invitations__invitation_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "invitation_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Invitation Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Revoke Invitation",
-        "tags": [
-          "Teams"
-        ]
-      }
-    },
-    "/api/v1/teams/{id}/members/me": {
-      "delete": {
-        "operationId": "leave_api_v1_teams__id__members_me_delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Leave",
-        "tags": [
-          "Teams"
         ]
       }
     }
