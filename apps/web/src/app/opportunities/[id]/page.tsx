@@ -9,6 +9,10 @@ export default function Detail() {
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false);
+  const [fit, setFit] = useState<{
+    score: number;
+    factors: Record<string, number>;
+  } | null>(null);
   useEffect(() => {
     api<Opportunity>("/opportunities/" + id)
       .then(setO)
@@ -60,51 +64,12 @@ export default function Detail() {
                   ...(o.preferred_skills ?? []),
                 ].join(" · ") || "No specific skills listed."}
               </p>
-              <h2>Eligibility</h2>
-              <p>
-                Published requirements are checked separately from fit. Sign in
-                to see your eligibility evidence.
-              </p>
-              <ul>
-                <li>
-                  Degrees:{" "}
-                  {o.eligibility?.degree_ids
-                    ?.map((x) => x.toUpperCase())
-                    .join(", ") || "All degrees"}
-                </li>
-                <li>
-                  Branches:{" "}
-                  {o.eligibility?.branch_ids
-                    ?.map((x) => x.toUpperCase())
-                    .join(", ") || "All branches"}
-                </li>
-                <li>
-                  Graduation years:{" "}
-                  {o.eligibility?.graduation_years?.join(", ") ||
-                    "No restriction listed"}
-                </li>
-                {Object.entries(o.eligibility?.minimum_cgpa ?? {}).map(
-                  ([scale, grade]) => (
-                    <li key={scale}>
-                      Minimum grade: {grade} on a {scale}-point scale
-                    </li>
-                  ),
-                )}
-              </ul>
               <button
                 disabled={busy}
                 onClick={async () => {
                   setBusy(true);
                   try {
-                    const result = await api<{
-                      status: string;
-                      reasons: string[];
-                    }>("/opportunities/" + id + "/eligibility");
-                    setMessage(
-                      result.status === "ELIGIBLE"
-                        ? "You meet the current eligibility requirements."
-                        : result.reasons.join(". "),
-                    );
+                    setFit(await api("/opportunities/" + id + "/fit"));
                   } catch (e) {
                     setMessage((e as Error).message);
                   } finally {
@@ -112,8 +77,89 @@ export default function Detail() {
                   }
                 }}
               >
-                Check my eligibility
+                See my profile match
               </button>
+              {fit && (
+                <section aria-live="polite">
+                  <h3>Profile fit: {fit.score}/100</h3>
+                  <p>
+                    Evidence overlap, not a prediction of selection. Eligibility
+                    and location restrictions must be checked separately.
+                  </p>
+                  <ul>
+                    {Object.entries(fit.factors).map(([factor, score]) => (
+                      <li key={factor}>
+                        {factor.replaceAll("_", " ")}: {Math.round(score)}%
+                        overlap
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              <h2>Eligibility</h2>
+              {o.source_name ? (
+                <p>
+                  Eligibility has not been structured for this external listing.
+                  Check the full requirements on {o.source_name} before
+                  applying.
+                </p>
+              ) : (
+                <>
+                  <p>
+                    Published requirements are checked separately from fit. Sign
+                    in to see your eligibility evidence.
+                  </p>
+                  <ul>
+                    <li>
+                      Degrees:{" "}
+                      {o.eligibility?.degree_ids
+                        ?.map((x) => x.toUpperCase())
+                        .join(", ") || "All degrees"}
+                    </li>
+                    <li>
+                      Branches:{" "}
+                      {o.eligibility?.branch_ids
+                        ?.map((x) => x.toUpperCase())
+                        .join(", ") || "All branches"}
+                    </li>
+                    <li>
+                      Graduation years:{" "}
+                      {o.eligibility?.graduation_years?.join(", ") ||
+                        "No restriction listed"}
+                    </li>
+                    {Object.entries(o.eligibility?.minimum_cgpa ?? {}).map(
+                      ([scale, grade]) => (
+                        <li key={scale}>
+                          Minimum grade: {grade} on a {scale}-point scale
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                  <button
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        const result = await api<{
+                          status: string;
+                          reasons: string[];
+                        }>("/opportunities/" + id + "/eligibility");
+                        setMessage(
+                          result.status === "ELIGIBLE"
+                            ? "You meet the current eligibility requirements."
+                            : result.reasons.join(". "),
+                        );
+                      } catch (e) {
+                        setMessage((e as Error).message);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    Check my eligibility
+                  </button>
+                </>
+              )}
             </article>
             <aside className="action-panel">
               <p>
@@ -123,12 +169,29 @@ export default function Detail() {
               </p>
               <h2>Your next step</h2>
               <p>Registration closes</p>
-              <time dateTime={o.registration_closes_at}>
-                {new Date(o.registration_closes_at).toLocaleString("en-GB", {
-                  timeZone: "UTC",
-                })}{" "}
-                UTC
-              </time>
+              {o.registration_closes_at ? (
+                <time dateTime={o.registration_closes_at}>
+                  {new Date(o.registration_closes_at).toLocaleString("en-GB", {
+                    timeZone: "UTC",
+                  })}{" "}
+                  UTC
+                </time>
+              ) : (
+                <p>No deadline supplied. Check the source for availability.</p>
+              )}
+              {o.source_name && (
+                <p>
+                  Source:{" "}
+                  <a
+                    href={o.source_url ?? o.apply_url ?? "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {o.source_name}
+                  </a>
+                  . Listings may change; confirm details at the source.
+                </p>
+              )}
               {o.mode === "EXTERNAL" && o.apply_url ? (
                 <>
                   <a

@@ -9,27 +9,16 @@ export class ApiError extends Error {
     super(message);
   }
 }
+let tokenGetter: (() => Promise<string | null>) | null = null;
+export function setTokenGetter(getter: (() => Promise<string | null>) | null) {
+  tokenGetter = getter;
+}
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const method = init.method ?? "GET";
   const headers = new Headers(init.headers);
-  if (init.body) headers.set("Content-Type", "application/json");
-  if (!["GET", "HEAD"].includes(method)) {
-    let csrf = document.cookie
-      .split("; ")
-      .find((x) => x.startsWith("alignn_csrf="))
-      ?.split("=")[1];
-    if (!csrf) {
-      await fetch("/api/v1/auth/csrf", {
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-      csrf = document.cookie
-        .split("; ")
-        .find((x) => x.startsWith("alignn_csrf="))
-        ?.split("=")[1];
-    }
-    if (csrf) headers.set("X-CSRF-Token", decodeURIComponent(csrf));
-  }
+  if (init.body && !headers.has("Content-Type"))
+    headers.set("Content-Type", "application/json");
+  const token = await tokenGetter?.();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
   const response = await fetch("/api/v1" + path, {
     ...init,
     headers,

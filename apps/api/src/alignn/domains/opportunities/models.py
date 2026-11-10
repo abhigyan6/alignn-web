@@ -19,6 +19,7 @@ from alignn.db import Base, Record
 class Opportunity(Record, Base):
     __tablename__ = "opportunities"
     __table_args__ = (
+        UniqueConstraint("source_name", "source_id", name="uq_opportunity_source"),
         CheckConstraint("mode IN ('HOSTED','EXTERNAL')"),
         CheckConstraint("capacity > 0 AND capacity_used >= 0 AND capacity_used <= capacity"),
         Index("ix_opportunity_search", "search_vector", postgresql_using="gin"),
@@ -34,9 +35,13 @@ class Opportunity(Record, Base):
     apply_url: Mapped[str | None] = mapped_column(String(1000))
     location: Mapped[str] = mapped_column(String(160), default="Remote")
     work_mode: Mapped[str] = mapped_column(String(20), default="REMOTE")
-    registration_closes_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    registration_closes_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    source_name: Mapped[str | None] = mapped_column(String(60))
+    source_id: Mapped[str | None] = mapped_column(String(180))
+    source_url: Mapped[str | None] = mapped_column(String(1000))
+    source_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     capacity: Mapped[int] = mapped_column(default=100)
     capacity_used: Mapped[int] = mapped_column(default=0)
     team_min: Mapped[int] = mapped_column(default=1)

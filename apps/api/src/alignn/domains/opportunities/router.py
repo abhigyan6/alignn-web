@@ -31,7 +31,13 @@ router = APIRouter(prefix="/api/v1", tags=["Opportunities"])
 
 
 def optional_actor(request):
-    return get_actor(request) if request.cookies.get("alignn_session") else None
+    config = request.app.state.settings
+    supplied = (
+        request.headers.get("authorization")
+        if config.auth_provider == "clerk"
+        else request.cookies.get("alignn_session")
+    )
+    return get_actor(request) if supplied else None
 
 
 @router.get("/opportunities")
@@ -130,6 +136,8 @@ def eligibility(id: UUID, request: Request):
     actor = get_actor(request)
     db = request.state.db
     o = visible(db, actor, id)
+    if o.source_name:
+        raise DomainError("eligibility_unstructured", "Check eligibility requirements on the original listing.", 409)
     return {
         **evaluate(
             profile_evidence(db, actor), EligibilityPolicy.model_validate(o.eligibility)

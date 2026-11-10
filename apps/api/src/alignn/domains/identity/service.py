@@ -60,6 +60,10 @@ def authenticate_session(db: Session, token: str, now: datetime) -> Actor:
 
 
 def get_actor(request: Request) -> Actor:
+    if request.app.state.settings.auth_provider == "clerk":
+        from alignn.domains.identity.clerk import authenticate_clerk
+
+        return authenticate_clerk(request)
     return authenticate_session(
         request.state.db, request.cookies.get("alignn_session", ""), utcnow()
     )
@@ -80,6 +84,9 @@ def require_admin(actor: Actor) -> Actor:
 def check_csrf(request: Request) -> None:
     if request.headers.get("origin") != request.app.state.settings.public_origin:
         raise DomainError("invalid_origin", "Reload this page and try again.", 403)
+    if request.app.state.settings.auth_provider == "clerk":
+        get_actor(request)  # Bearer verification plus exact Origin; never trust legacy cookies.
+        return
     session = load_session(request.state.db, request.cookies.get("alignn_session"), utcnow())
     token = request.headers.get("x-csrf-token", "")
     if not session or not token or not secrets.compare_digest(session.csrf_hash, digest(token)):
@@ -97,7 +104,9 @@ def limit(db: Session, scope: str, identity: str, maximum: int = 10) -> None:
         raise DomainError("rate_limited", "Too many attempts. Please try again in a minute.", 429)
 
 
-def verify_password(password: str, password_hash: str) -> bool:
+def verify_password(password: str, password_hash: str | None) -> bool:
+    if not password_hash:
+        return False
     try:
         return hasher.verify(password_hash, password)
     except (VerificationError, InvalidHashError):

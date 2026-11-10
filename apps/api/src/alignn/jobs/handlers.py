@@ -65,6 +65,14 @@ HANDLERS = {
 }
 
 
+def ingest_remotive(payload, adapters, key):
+    from alignn.domains.opportunities.ingestion import sync_remotive
+    sync_remotive()
+
+
+HANDLERS["ingest_remotive"] = ingest_remotive
+
+
 def dispatch(kind: str, payload: dict, adapters: Adapters, key: str):
     handler = HANDLERS.get(kind)
     if not handler:

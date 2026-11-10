@@ -3,8 +3,9 @@
 import time
 
 from alignn.db import SessionLocal, utcnow
+from alignn.domains.opportunities.ingestion import schedule_ingestion
 
-SCHEDULES = []
+SCHEDULES = [schedule_ingestion]
 
 
 def tick():

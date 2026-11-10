@@ -1,8 +1,8 @@
 # Alignn
 
-An opportunity and participation platform for students, teams and organizers.
+A career opportunity discovery platform for students.
 
-Alignn brings together opportunity discovery, explainable eligibility, application tracking, team registration, submission rounds and organizer-reviewed results.
+Alignn centers on profile-based opportunity discovery, explainable eligibility and application tracking. Source-specific collection and resume parsing are still pending. Hosted events are a secondary workflow.
 
 ## Project status
 
@@ -32,6 +32,8 @@ docs                     Specification, plan and operating instructions
 
 ## Run locally
 
+Deployment preparation for the proposed Heroku API/database and AWS web/worker split is documented in [the staging runbook](docs/runbooks/heroku-staging.md). This configuration is not yet deployed.
+
 Use Node 24 and the Python environment installed from `apps/api/uv.lock`. Configure `.env` using `.env.example`, start PostgreSQL and apply migrations as described in `docs/runbooks/local-development.md`.
 
 ```sh
@@ -42,11 +44,15 @@ PYTHONPATH=apps/api/src apps/api/.venv/bin/python -m uvicorn alignn.main:app --h
 NEXT_TELEMETRY_DISABLED=1 npm run dev
 ```
 
-Open http://localhost:3000/explore. The frontend forwards `/api/*` to loopback port 8000, and PUBLIC_ORIGIN must be http://localhost:3000. The catalog intentionally stays empty until published records exist; concept fixtures are not live listings. Run the separate Python worker and local SMTP inbox for account email delivery.
+Open http://localhost:3000/explore. The frontend forwards `/api/*` to loopback port 8000, and PUBLIC_ORIGIN must be http://localhost:3000. The catalog intentionally stays empty until published records exist; concept fixtures are not live listings. Clerk handles sign-in, verification and account recovery. Configure its development keys in `apps/web/.env.local`; see the local runbook. The separate Python worker handles matching and private-file scanning.
 
 Checks: `npm run lint`, `npm run typecheck`, `npm run build`, `npm run test:e2e` (requires running web/API and installed Google Chrome), and `apps/api/.venv/bin/python -m pytest apps/api/tests -q` with a migrated, dedicated TEST_DATABASE_URL.
 
-Current checkpoint evidence: 53 API tests and 6 desktop/mobile browser tests passed locally. Browser tests cover discovery/category requests, invalid login and missing verification tokens; they do not establish a complete hosted-event lifecycle or production readiness. Follow-up work includes the full participant/profile/tracker workspace, organizer/admin interfaces, judging, reminders, privacy lifecycle, remaining revised abuse/trust rules and operational validation.
+Current checkpoint evidence (4 November 2026): 66 PostgreSQL-backed API tests, 8 desktop/mobile browser tests, lint, production build and migration-drift checks passed from the non-iCloud checkout. Browser checks cover discovery, Clerk sign-in rendering, workspace protection and recovery redirects. They do not verify a real user's completed Google/email sign-in or the full authenticated onboarding journey.
+
+Active checkout on the development Mac: `/Users/abhigyandwivedi/Developer/alignn-web`. The former Documents checkout is retained as a backup. See [migration checkpoint](docs/implementation/2026-11-04-clerk-and-local-migration.md) for the remaining iCloud file-recovery limitation.
+
+Follow-up work includes source ingestion, resume parsing, the full personalized dashboard/tracker, organizer/admin interfaces, judging, reminders, privacy lifecycle and operational validation.
 
 Manrope is served locally through @fontsource/manrope under SIL Open Font License 1.1 (copyright The Manrope Project Authors). The drawn loop mark is a proposed vector variation, not an exact reproduction of the supplied brand master.
 

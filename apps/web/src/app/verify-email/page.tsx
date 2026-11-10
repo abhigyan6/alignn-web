@@ -1,4 +1,4 @@
-import TokenForm from "@/components/token-form";
-export default function Verify() {
-  return <TokenForm purpose="verify-email" />;
+import { redirect } from "next/navigation";
+export default function Page() {
+  redirect("/login");
 }

@@ -21,7 +21,13 @@ class Record:
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
-engine = create_engine(settings.database_url, pool_pre_ping=True, pool_size=12, max_overflow=100)
+engine = create_engine(
+    settings.database_url,
+    pool_pre_ping=True,
+    pool_size=settings.database_pool_size,
+    max_overflow=settings.database_max_overflow,
+    pool_timeout=settings.database_pool_timeout,
+)
 SessionLocal = sessionmaker(engine, expire_on_commit=False)
 
 

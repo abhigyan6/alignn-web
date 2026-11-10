@@ -1,0 +1,8 @@
+# Cedar container app. No add-ons are automatically provisioned by this manifest.
+build:
+  docker:
+    web: apps/api/Dockerfile
+release:
+  image: web
+  command:
+    - alembic -c alembic.ini upgrade head

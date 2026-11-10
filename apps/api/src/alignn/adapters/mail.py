@@ -27,6 +27,10 @@ class MailAdapter:
                     import ssl
 
                     smtp.starttls(context=ssl.create_default_context())
+                if self.settings.mail_username and self.settings.mail_password:
+                    if self.settings.environment != "production":
+                        raise ValueError("SMTP credentials require TLS in production")
+                    smtp.login(self.settings.mail_username, self.settings.mail_password.get_secret_value())
                 smtp.send_message(message)
         except smtplib.SMTPRecipientsRefused as exc:
             raise PermanentDeliveryError("invalid_address") from exc

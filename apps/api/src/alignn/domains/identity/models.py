@@ -11,7 +11,8 @@ class User(Record, Base):
     __tablename__ = "users"
     email: Mapped[str] = mapped_column(String(320), unique=True)
     full_name: Mapped[str] = mapped_column(String(160))
-    password_hash: Mapped[str]
+    clerk_subject: Mapped[str | None] = mapped_column(String(160), unique=True)
+    password_hash: Mapped[str | None]
     is_admin: Mapped[bool] = mapped_column(default=False)
     is_verified: Mapped[bool] = mapped_column(default=False)
     is_active: Mapped[bool] = mapped_column(default=True)

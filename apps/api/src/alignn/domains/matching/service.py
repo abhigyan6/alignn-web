@@ -39,7 +39,10 @@ def calculate_fit(db, user_id, opportunity):
     factors = [
         skill_score(owned, opportunity.required_skills, opportunity.preferred_skills),
         overlap(project_skills, required),
-        overlap(set(p.career_interests if p else []), set(opportunity.interests)),
+        overlap(
+            tokens(" ".join(p.career_interests if p else [])),
+            tokens(" ".join(opportunity.interests)),
+        ),
         100 if p and p.preferred_work_mode in {"ANY", opportunity.work_mode} else 0,
         100
         if p

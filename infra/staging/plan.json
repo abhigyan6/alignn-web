@@ -1,0 +1,27 @@
+{
+  "status": "superseded-not-provisioned",
+  "superseded_by": "docs/runbooks/heroku-staging.md",
+  "historical_note": "The resource choices below are the earlier all-AWS proposal, not the current deployment target.",
+  "region": "ap-south-1",
+  "vpc_id": "vpc-09e89d117ac314499",
+  "subnet_id": "subnet-0194d8a17518b29c1",
+  "availability_zone": "ap-south-1a",
+  "existing_database": "alignn-rds-dev",
+  "compute": {
+    "instance_type": "t4g.medium",
+    "architecture": "arm64",
+    "monthly_running_hours_target": 160,
+    "cpu_credit_mode": "standard",
+    "root_volume": {"type": "gp3", "gib": 30, "encrypted": true},
+    "imds": "v2-required",
+    "administration": "SSM Session Manager; no SSH key or port 22",
+    "public_ipv4": "one fixed address; budgeted continuously even when stopped"
+  },
+  "processes": ["Caddy HTTPS", "Next.js", "FastAPI", "Python worker", "Python scheduler", "ClamAV"],
+  "files": "private S3 bucket with quarantine and instance-role access",
+  "database_network": "new dedicated RDS security group allowing 5432 only from app security group; preserve existing group rules",
+  "secrets": "runtime secret injection; never source control, AMI, image build args or CloudFormation plaintext",
+  "excluded": ["NAT Gateway", "load balancer", "RDS Proxy", "Kubernetes", "reserved capacity", "paid AI inference"],
+  "launch_inputs_pending": ["availability-hours decision", "HTTPS hostname and DNS control", "scoped deployment role", "runtime secret provision", "confirmed budget notification address"],
+  "launch_checks_pending": ["ARM build", "production role-based S3 support", "database TLS and application DB user", "scanner ready", "Clerk callback allowlist", "database migration", "end-to-end browser test", "restore rehearsal"]
+}

@@ -10,6 +10,7 @@ if not test_url or "test" not in test_url.rsplit("/", 1)[-1]:
     raise RuntimeError("Set TEST_DATABASE_URL to a dedicated PostgreSQL test database")
 os.environ["DATABASE_URL"] = test_url
 os.environ["ENVIRONMENT"] = "test"
+os.environ["AUTH_PROVIDER"] = "local"
 
 from sqlalchemy import inspect, text  # noqa: E402
 

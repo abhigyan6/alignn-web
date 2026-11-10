@@ -14,7 +14,7 @@ export default function Explore() {
   const [kind, setKind] = useState(""),
     [query, setQuery] = useState(""),
     [search, setSearch] = useState(""),
-    [sort, setSort] = useState("deadline");
+    [sort, setSort] = useState("match");
   const [items, setItems] = useState<Opportunity[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
@@ -22,6 +22,11 @@ export default function Explore() {
     [next, setNext] = useState<number | null>(null),
     [cursor, setCursor] = useState(0),
     [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    if (rank !== "PENDING" || sort !== "match") return;
+    const timer = setTimeout(() => setAttempt((value) => value + 1), 5000);
+    return () => clearTimeout(timer);
+  }, [rank, sort, attempt]);
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -201,16 +206,24 @@ export default function Explore() {
                       {o.location} · {o.work_mode.toLowerCase()}
                     </p>
                     <div className="event-bottom">
-                      <time dateTime={o.registration_closes_at}>
-                        Closes{" "}
-                        {new Date(o.registration_closes_at).toLocaleDateString(
-                          "en-GB",
-                          { day: "numeric", month: "short", timeZone: "UTC" },
-                        )}{" "}
-                        · UTC
-                      </time>
+                      {o.registration_closes_at ? (
+                        <time dateTime={o.registration_closes_at}>
+                          Closes{" "}
+                          {new Date(
+                            o.registration_closes_at,
+                          ).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            timeZone: "UTC",
+                          })}{" "}
+                          · UTC
+                        </time>
+                      ) : (
+                        <span>Deadline not provided</span>
+                      )}
                       <span>View ↗</span>
                     </div>
+                    {o.source_name && <small>Source: {o.source_name}</small>}
                   </div>
                 </Link>
               ))}
@@ -225,7 +238,7 @@ export default function Explore() {
               <p>
                 {search || kind
                   ? "Try another keyword or category."
-                  : "No published opportunities are available yet. Check back as organizers publish to the catalog."}
+                  : "No published opportunities are available yet. Check back as sources refresh."}
               </p>
               {(search || kind) && (
                 <button

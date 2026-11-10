@@ -17,9 +17,9 @@ class OpportunityCreate(StrictModel):
     apply_url: str | None = Field(None, max_length=1000)
     location: str = Field("Remote", max_length=160)
     work_mode: Literal["REMOTE", "HYBRID", "ONSITE"] = "REMOTE"
-    registration_closes_at: datetime
-    starts_at: datetime
-    ends_at: datetime
+    registration_closes_at: datetime | None = None
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
     capacity: int = Field(100, ge=1, le=100000)
     team_min: int = Field(1, ge=1, le=20)
     team_max: int = Field(1, ge=1, le=20)
@@ -37,13 +37,21 @@ class OpportunityCreate(StrictModel):
     @field_validator("registration_closes_at", "starts_at", "ends_at")
     @classmethod
     def timezone(cls, v):
-        if v.tzinfo is None:
+        if v is not None and v.tzinfo is None:
             raise ValueError("Include a timezone")
         return v
 
     @model_validator(mode="after")
     def valid(self):
-        if self.registration_closes_at > self.starts_at or self.starts_at > self.ends_at:
+        if self.mode == "HOSTED" and not all(
+            (self.registration_closes_at, self.starts_at, self.ends_at)
+        ):
+            raise ValueError("Hosted events require registration, start and end dates")
+        if (
+            self.registration_closes_at
+            and self.starts_at
+            and self.registration_closes_at > self.starts_at
+        ) or (self.starts_at and self.ends_at and self.starts_at > self.ends_at):
             raise ValueError("Registration, start and end must be in order")
         if self.team_min > self.team_max:
             raise ValueError("Team minimum exceeds maximum")
@@ -64,6 +72,9 @@ class OpportunityOut(OpportunityCreate):
     deadline_version: int
     capacity_used: int
     created_at: datetime
+    source_name: str | None = None
+    source_url: str | None = None
+    source_checked_at: datetime | None = None
 
 
 class VersionCommand(StrictModel):

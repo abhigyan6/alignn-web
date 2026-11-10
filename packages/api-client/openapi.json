@@ -323,9 +323,16 @@
             "$ref": "#/components/schemas/EligibilityPolicy-Input"
           },
           "ends_at": {
-            "format": "date-time",
-            "title": "Ends At",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
           },
           "interests": {
             "items": {
@@ -376,9 +383,16 @@
             "type": "string"
           },
           "registration_closes_at": {
-            "format": "date-time",
-            "title": "Registration Closes At",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Closes At"
           },
           "required_skills": {
             "items": {
@@ -389,9 +403,16 @@
             "type": "array"
           },
           "starts_at": {
-            "format": "date-time",
-            "title": "Starts At",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
           },
           "team_max": {
             "default": 1,
@@ -428,10 +449,7 @@
           "title",
           "description",
           "kind",
-          "mode",
-          "registration_closes_at",
-          "starts_at",
-          "ends_at"
+          "mode"
         ],
         "title": "OpportunityCreate",
         "type": "object"
@@ -500,9 +518,16 @@
             "$ref": "#/components/schemas/EligibilityPolicy-Output"
           },
           "ends_at": {
-            "format": "date-time",
-            "title": "Ends At",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
           },
           "id": {
             "format": "uuid",
@@ -567,9 +592,16 @@
             "type": "string"
           },
           "registration_closes_at": {
-            "format": "date-time",
-            "title": "Registration Closes At",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Closes At"
           },
           "required_skills": {
             "items": {
@@ -579,10 +611,51 @@
             "title": "Required Skills",
             "type": "array"
           },
+          "source_checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Checked At"
+          },
+          "source_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Name"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
           "starts_at": {
-            "format": "date-time",
-            "title": "Starts At",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
           },
           "status": {
             "title": "Status",
@@ -628,9 +701,6 @@
           "description",
           "kind",
           "mode",
-          "registration_closes_at",
-          "starts_at",
-          "ends_at",
           "id",
           "organization_id",
           "organization_name",

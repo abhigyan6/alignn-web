@@ -28,7 +28,14 @@ from alignn.domains.identity.service import (
 from alignn.errors import DomainError
 from alignn.jobs.worker import enqueue_job
 
+
+def local_auth_only(request: Request):
+    if request.app.state.settings.auth_provider != "local":
+        raise DomainError("managed_auth", "Use Clerk to manage your account.", 410)
+
+
 router = APIRouter(prefix="/api/v1", tags=["Identity"])
+legacy = APIRouter(dependencies=[Depends(local_auth_only)])
 
 
 def set_session_cookies(request: Request, response: Response, secret) -> None:
@@ -54,7 +61,7 @@ def set_session_cookies(request: Request, response: Response, secret) -> None:
     )
 
 
-@router.get("/auth/csrf")
+@legacy.get("/auth/csrf")
 def csrf(request: Request, response: Response):
     db = request.state.db
     current = load_session(db, request.cookies.get("alignn_session"), utcnow())
@@ -80,7 +87,7 @@ def csrf(request: Request, response: Response):
     return {"csrf_token": secret.csrf}
 
 
-@router.post(
+@legacy.post(
     "/auth/signup", response_model=UserOut, status_code=201, dependencies=[Depends(check_csrf)]
 )
 def signup(data: Signup, request: Request):
@@ -100,7 +107,7 @@ def signup(data: Signup, request: Request):
     return user
 
 
-@router.post("/auth/login", response_model=UserOut, dependencies=[Depends(check_csrf)])
+@legacy.post("/auth/login", response_model=UserOut, dependencies=[Depends(check_csrf)])
 def login(data: Login, request: Request, response: Response):
     db = request.state.db
     limit(db, "login-ip", request.client.host)
@@ -124,7 +131,7 @@ def me(request: Request):
     return request.state.db.get(User, actor.user_id)
 
 
-@router.post("/auth/logout", status_code=204, dependencies=[Depends(check_csrf)])
+@legacy.post("/auth/logout", status_code=204, dependencies=[Depends(check_csrf)])
 def logout(request: Request, response: Response):
     current = load_session(request.state.db, request.cookies.get("alignn_session"), utcnow())
     if current:
@@ -133,14 +140,14 @@ def logout(request: Request, response: Response):
     response.delete_cookie("alignn_csrf", path="/")
 
 
-@router.post("/auth/verify-email", status_code=204, dependencies=[Depends(check_csrf)])
+@legacy.post("/auth/verify-email", status_code=204, dependencies=[Depends(check_csrf)])
 def verify_email(data: TokenRequest, request: Request):
     user = consume_action_token(request.state.db, data.token, "verify")
     user.is_verified = True
     revoke_sessions(request.state.db, user.id)
 
 
-@router.post("/auth/forgot-password", status_code=202, dependencies=[Depends(check_csrf)])
+@legacy.post("/auth/forgot-password", status_code=202, dependencies=[Depends(check_csrf)])
 def forgot_password(data: EmailRequest, request: Request):
     db = request.state.db
     limit(db, "reset", request.client.host, 5)
@@ -151,14 +158,14 @@ def forgot_password(data: EmailRequest, request: Request):
     return {"message": "If the account exists, a reset link will be sent."}
 
 
-@router.post("/auth/reset-password", status_code=204, dependencies=[Depends(check_csrf)])
+@legacy.post("/auth/reset-password", status_code=204, dependencies=[Depends(check_csrf)])
 def reset_password(data: ResetRequest, request: Request):
     user = consume_action_token(request.state.db, data.token, "reset")
     user.password_hash = hasher.hash(data.password)
     revoke_sessions(request.state.db, user.id)
 
 
-@router.get("/me/sessions")
+@legacy.get("/me/sessions")
 def list_sessions(request: Request):
     actor = get_actor(request)
     rows = request.state.db.scalars(
@@ -197,3 +204,6 @@ def enqueue_account_mail(db, user: User, token: str, purpose: str, origin: str):
         expires_at=utcnow()
         + (timedelta(hours=24) if purpose == "verify" else timedelta(minutes=30)),
     )
+
+
+router.include_router(legacy)

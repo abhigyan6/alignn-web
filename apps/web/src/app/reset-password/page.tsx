@@ -1,4 +1,4 @@
-import TokenForm from "@/components/token-form";
-export default function Reset() {
-  return <TokenForm purpose="reset-password" />;
+import { redirect } from "next/navigation";
+export default function Page() {
+  redirect("/login");
 }

@@ -1208,11 +1208,8 @@ export interface components {
             /** Description */
             description: string;
             eligibility?: components["schemas"]["EligibilityPolicy-Input"];
-            /**
-             * Ends At
-             * Format: date-time
-             */
-            ends_at: string;
+            /** Ends At */
+            ends_at?: string | null;
             /** Interests */
             interests?: string[];
             /**
@@ -1237,18 +1234,12 @@ export interface components {
              * @default
              */
             prize: string;
-            /**
-             * Registration Closes At
-             * Format: date-time
-             */
-            registration_closes_at: string;
+            /** Registration Closes At */
+            registration_closes_at?: string | null;
             /** Required Skills */
             required_skills?: string[];
-            /**
-             * Starts At
-             * Format: date-time
-             */
-            starts_at: string;
+            /** Starts At */
+            starts_at?: string | null;
             /**
              * Team Max
              * @default 1
@@ -1295,11 +1286,8 @@ export interface components {
             /** Description */
             description: string;
             eligibility?: components["schemas"]["EligibilityPolicy-Output"];
-            /**
-             * Ends At
-             * Format: date-time
-             */
-            ends_at: string;
+            /** Ends At */
+            ends_at?: string | null;
             /**
              * Id
              * Format: uuid
@@ -1336,18 +1324,18 @@ export interface components {
              * @default
              */
             prize: string;
-            /**
-             * Registration Closes At
-             * Format: date-time
-             */
-            registration_closes_at: string;
+            /** Registration Closes At */
+            registration_closes_at?: string | null;
             /** Required Skills */
             required_skills?: string[];
-            /**
-             * Starts At
-             * Format: date-time
-             */
-            starts_at: string;
+            /** Source Checked At */
+            source_checked_at?: string | null;
+            /** Source Name */
+            source_name?: string | null;
+            /** Source Url */
+            source_url?: string | null;
+            /** Starts At */
+            starts_at?: string | null;
             /** Status */
             status: string;
             /**

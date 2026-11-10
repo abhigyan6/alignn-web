@@ -38,7 +38,7 @@ class LocalObjects:
 
 class S3Objects:
     def __init__(self, settings: Settings):
-        if not all(
+        if settings.object_auth_mode == "static" and not all(
             (settings.object_endpoint, settings.object_access_key, settings.object_secret_key)
         ):
             raise DomainError("storage_unavailable", "Private file storage is not configured.", 503)
@@ -46,19 +46,26 @@ class S3Objects:
         from botocore.config import Config
 
         self.bucket = settings.object_bucket
-        self.client = boto3.client(
-            "s3",
-            endpoint_url=settings.object_endpoint,
-            aws_access_key_id=settings.object_access_key,
-            aws_secret_access_key=settings.object_secret_key,
-            config=Config(
+        # AWS mode uses the SDK credential chain, including refreshing EC2 role
+        # credentials: https://docs.aws.amazon.com/boto3/latest/guide/credentials.html
+        options = {
+            "config": Config(
                 connect_timeout=10,
                 read_timeout=10,
                 retries={"max_attempts": 2},
                 signature_version="s3v4",
-                s3={"addressing_style": "path"},
+                s3={"addressing_style": "virtual" if settings.object_auth_mode == "iam" else "path"},
             ),
-        )
+        }
+        if settings.object_auth_mode == "iam":
+            options["region_name"] = settings.object_region
+        else:
+            options.update(
+                endpoint_url=settings.object_endpoint,
+                aws_access_key_id=settings.object_access_key,
+                aws_secret_access_key=settings.object_secret_key.get_secret_value(),
+            )
+        self.client = boto3.client("s3", **options)
 
     def upload_url(self, key: str, size: int):
         return self.client.generate_presigned_url(

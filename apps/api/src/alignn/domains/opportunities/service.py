@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from alignn.db import utcnow
 from alignn.domains.identity.service import require_verified
@@ -74,7 +74,13 @@ def mutate_opportunity(db, actor, opportunity_id, expected_version, data):
 
 
 def search_opportunities(db, actor, query):
-    base = select(Opportunity).where(Opportunity.status == "PUBLISHED")
+    base = select(Opportunity).where(
+        Opportunity.status == "PUBLISHED",
+        or_(
+            Opportunity.registration_closes_at.is_(None),
+            Opportunity.registration_closes_at > utcnow(),
+        ),
+    )
     if query.q:
         base = base.where(
             Opportunity.search_vector.op("@@")(func.websearch_to_tsquery("english", query.q))

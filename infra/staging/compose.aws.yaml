@@ -1,0 +1,77 @@
+# Prebuilt, matching-revision images only. No database server runs on this host.
+# Runtime env files are provisioned on the host; never commit or print resolved config.
+x-service: &service
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+x-api: &api
+  <<: *service
+  image: ${ALIGNN_API_IMAGE:?Set a tested API image tag or digest}
+  env_file:
+    - ${ALIGNN_API_ENV_FILE:?Set the protected host runtime environment file}
+  environment:
+    ENVIRONMENT: production
+    AUTH_PROVIDER: clerk
+    DATABASE_POOL_SIZE: "3"
+    DATABASE_MAX_OVERFLOW: "2"
+    DATABASE_POOL_TIMEOUT: "10"
+    PGSSLMODE: verify-full
+    PGSSLROOTCERT: /run/alignn/postgres-ca.pem
+    SCANNER_HOST: scanner
+  volumes:
+    - ${ALIGNN_POSTGRES_CA_FILE:?Set the provider CA certificate file}:/run/alignn/postgres-ca.pem:ro
+
+services:
+  proxy:
+    <<: *service
+    image: ${ALIGNN_PROXY_IMAGE:?Set a reviewed Caddy image digest}
+    environment:
+      ALIGNN_HOSTNAME: ${ALIGNN_HOSTNAME:?Set the actual HTTPS hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.aws:/etc/caddy/Caddyfile:ro
+      - proxy_data:/data
+      - proxy_config:/config
+    depends_on:
+      - web
+      - api
+  web:
+    <<: *service
+    image: ${ALIGNN_WEB_IMAGE:?Set a tested web image tag or digest}
+    env_file:
+      - ${ALIGNN_WEB_ENV_FILE:?Set the protected web runtime environment file}
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+  api:
+    <<: *api
+    command: ["uvicorn", "alignn.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+  worker:
+    <<: *api
+    command: ["python", "-m", "alignn.jobs.worker"]
+    depends_on:
+      - scanner
+  scheduler:
+    <<: *api
+    command: ["python", "-m", "alignn.jobs.scheduler"]
+  migrate:
+    <<: *api
+    profiles: ["release"]
+    restart: "no"
+    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+  scanner:
+    <<: *service
+    image: ${ALIGNN_SCANNER_IMAGE:?Set a reviewed ARM-compatible ClamAV image digest}
+    volumes:
+      - scanner_signatures:/var/lib/clamav
+
+volumes:
+  proxy_data:
+  proxy_config:
+  scanner_signatures:
