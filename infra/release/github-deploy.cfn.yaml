@@ -1,0 +1,131 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Alignn private image repositories and branch-scoped GitHub deployment
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+Parameters:
+  InstanceId:
+    Type: String
+    AllowedPattern: "^i-[a-f0-9]{17}$"
+  GitHubProviderArn:
+    Type: String
+    AllowedPattern: "^arn:aws:iam::[0-9]{12}:oidc-provider/token.actions.githubusercontent.com$"
+  GitHubSubject:
+    Type: String
+    AllowedValues:
+      - "repo:abhigyan6@84132249/alignn-web@1444680655:ref:refs/heads/main"
+Resources:
+  ApiRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Stores API, worker and scheduler images by immutable digest.
+        must: Keep private and preserve rollback artifacts.
+    Properties:
+      RepositoryName: alignn-api
+      ImageTagMutability: IMMUTABLE
+  WebRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Stores web images for the same revision as the API.
+        must: Keep private and preserve rollback artifacts.
+    Properties:
+      RepositoryName: alignn-web
+      ImageTagMutability: IMMUTABLE
+  DeployDocument:
+    Type: AWS::SSM::Document
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Provides one restricted release operation to GitHub.
+        must: Accept image digests and a Git revision only.
+    Properties:
+      Name: !Sub "${AWS::StackName}-release"
+      DocumentType: Command
+      TargetType: /AWS::EC2::Instance
+      DocumentFormat: YAML
+      UpdateMethod: NewVersion
+      Content:
+        schemaVersion: "2.2"
+        description: Release matching Alignn images
+        parameters:
+          ApiDigest:
+            type: String
+            allowedPattern: "^sha256:[a-f0-9]{64}$"
+            interpolationType: ENV_VAR
+          WebDigest:
+            type: String
+            allowedPattern: "^sha256:[a-f0-9]{64}$"
+            interpolationType: ENV_VAR
+          Revision:
+            type: String
+            allowedPattern: "^[a-f0-9]{40}$"
+            interpolationType: ENV_VAR
+        mainSteps:
+          - action: aws:runShellScript
+            name: releaseAlignn
+            inputs:
+              timeoutSeconds: "900"
+              runCommand:
+                - 'exec /opt/alignn/release-tools/deploy.sh "${SSM_ApiDigest:?}" "${SSM_WebDigest:?}" "${SSM_Revision:?}"'
+  GitHubDeployRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Uses short-lived AWS access for reviewed commits on main.
+        must: Trust one immutable GitHub subject and one release command and instance.
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref GitHubProviderArn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Ref GitHubSubject
+      Policies:
+        - PolicyName: AlignnRelease
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: !Ref AWS::Region
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:CompleteLayerUpload
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:InitiateLayerUpload
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                Resource:
+                  - !GetAtt ApiRepository.Arn
+                  - !GetAtt WebRepository.Arn
+              - Effect: Allow
+                Action: ssm:SendCommand
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${DeployDocument}"
+                  - !Sub "arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${InstanceId}"
+              - Effect: Allow
+                Action: ssm:GetCommandInvocation
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: !Ref AWS::Region
+Outputs:
+  DeployRoleArn:
+    Value: !GetAtt GitHubDeployRole.Arn
+  DeployDocumentName:
+    Value: !Ref DeployDocument

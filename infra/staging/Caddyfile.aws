@@ -1,0 +1,11 @@
+{$ALIGNN_HOSTNAME} {
+    request_body {
+        max_size 26MB
+    }
+    handle /api/* {
+        reverse_proxy api:8000
+    }
+    handle {
+        reverse_proxy web:3000
+    }
+}
