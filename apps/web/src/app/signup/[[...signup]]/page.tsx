@@ -26,7 +26,13 @@ export default function Page() {
         <p className="brand-note">Find your people. Find your next step.</p>
         <h1>Make room for your next chapter.</h1>
         <Suspense fallback={<p role="status">Loading secure sign-in…</p>}>
-          <SignUp routing="path" path="/signup" signInUrl="/login" />
+          <SignUp
+            routing="path"
+            path="/signup"
+            signInUrl="/login"
+            fallbackRedirectUrl="/auth/redirect"
+            forceRedirectUrl="/auth/redirect"
+          />
         </Suspense>
       </section>
     </main>

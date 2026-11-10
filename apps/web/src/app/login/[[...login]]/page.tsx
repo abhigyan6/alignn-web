@@ -97,6 +97,8 @@ export default function Page() {
               routing="path"
               path="/login"
               signUpUrl="/signup"
+              fallbackRedirectUrl="/auth/redirect"
+              forceRedirectUrl="/auth/redirect"
               appearance={{
                 variables: {
                   colorPrimary: "#14543f",
