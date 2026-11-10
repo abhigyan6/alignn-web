@@ -1,20 +1,26 @@
 "use client";
 import { ClerkProvider, useAuth, UserButton } from "@clerk/nextjs";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import AccountLoading from "@/components/account-loading";
 import { setTokenGetter } from "@/lib/api";
 
 export function SessionBridge({ children }: { children: React.ReactNode }) {
   const { isLoaded, getToken } = useAuth();
+  const getTokenRef = useRef(getToken);
   const [ready, setReady] = useState(false);
+
   useEffect(() => {
-    if (isLoaded) {
-      setTokenGetter(() => getToken());
-      setReady(true);
-    }
+    getTokenRef.current = getToken;
+  }, [getToken]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    setTokenGetter(() => getTokenRef.current());
+    setReady(true);
     return () => setTokenGetter(null);
-  }, [isLoaded, getToken]);
+  }, [isLoaded]);
+
   return ready ? children : <AccountLoading />;
 }
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -23,8 +29,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       telemetry={{ disabled: true }}
       signInUrl="/login"
       signUpUrl="/signup"
-      signInForceRedirectUrl="/workspace"
-      signUpForceRedirectUrl="/onboarding"
+      signInFallbackRedirectUrl="/auth/redirect"
+      signUpFallbackRedirectUrl="/auth/redirect"
       appearance={{
         variables: {
           colorPrimary: "#2344dc",
