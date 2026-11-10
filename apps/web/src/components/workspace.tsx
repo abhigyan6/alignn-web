@@ -4,6 +4,7 @@ import { useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, User, Opportunity } from "@/lib/api";
+import ApplicationTracker from "@/components/application-tracker";
 export default function Workspace() {
   const { signOut } = useClerk();
   const router = useRouter();
@@ -74,6 +75,7 @@ export default function Workspace() {
               </div>
             )}
           </section>
+          <ApplicationTracker />
           <button
             onClick={async () => {
               try {

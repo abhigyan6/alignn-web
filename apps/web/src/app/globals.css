@@ -1087,3 +1087,56 @@ fieldset {
   display: grid;
   gap: 8px;
 }
+
+.tracker-list {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+}
+.tracker-row {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+.tracker-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tracker-summary p,
+.tracker-history p {
+  margin: 4px 0 0;
+}
+.tracker-form {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  margin: 16px 0;
+}
+.tracker-form label {
+  display: grid;
+  width: min(100%, 420px);
+  gap: 4px;
+}
+.tracker-form textarea {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 14px;
+  resize: vertical;
+}
+.tracker-history {
+  display: grid;
+  gap: 12px;
+}
+.tracker-history p {
+  white-space: pre-wrap;
+}

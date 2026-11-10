@@ -8,7 +8,8 @@ export default function Detail() {
   const [o, setO] = useState<Opportunity | null>(null),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [tracked, setTracked] = useState(false);
   const [fit, setFit] = useState<{
     score: number;
     factors: Record<string, number>;
@@ -21,11 +22,13 @@ export default function Detail() {
   async function action(path: string, body?: object) {
     setBusy(true);
     setMessage("");
+    setTracked(false);
     try {
       await api(path, {
         method: "POST",
         body: body ? JSON.stringify(body) : undefined,
       });
+      setTracked(path === "/applications");
       setMessage(
         path.endsWith("save")
           ? "Saved to your workspace."
@@ -224,6 +227,11 @@ export default function Detail() {
                 Save opportunity
               </button>
               <p role="status">{message}</p>
+              {tracked && (
+                <Link href="/workspace#applications">
+                  Open application tracker ↗
+                </Link>
+              )}
             </aside>
           </div>
         </>
