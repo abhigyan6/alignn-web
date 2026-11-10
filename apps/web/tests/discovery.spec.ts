@@ -25,7 +25,9 @@ test("discovery loads real API and keeps filters usable", async ({ page }) => {
 test("Clerk sign-in renders with a sign-up path", async ({ page }) => {
   await page.goto("/login");
   await expect(
-    page.getByRole("heading", { name: "Your next step starts here." }),
+    page.getByRole("heading", {
+      name: "Sign in to Alignn",
+    }),
   ).toBeVisible();
   await expect(page.getByLabel("Email address", { exact: true })).toBeVisible();
   await expect(
@@ -38,14 +40,21 @@ test("Clerk sign-in renders with a sign-up path", async ({ page }) => {
   ).toBe(true);
 });
 
-test("workspace requires a Clerk session", async ({ page }) => {
-  await page.goto("/workspace");
-  await expect(page).toHaveURL(/\/login/);
-  await expect(page.getByLabel("Email address", { exact: true })).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Your workspace", exact: true }),
-  ).toHaveCount(0);
-});
+for (const route of ["/workspace", "/onboarding", "/onboarding?edit=1"]) {
+  test(`${route} requires a Clerk session`, async ({ page }) => {
+    await page.goto(route);
+    await expect(page).toHaveURL(/\/login/);
+    await expect(
+      page.getByLabel("Email address", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Your workspace", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Make Alignn yours.", exact: true }),
+    ).toHaveCount(0);
+  });
+}
 
 test("legacy recovery routes use Clerk", async ({ page }) => {
   await page.goto("/reset-password?token=obsolete");

@@ -97,7 +97,6 @@ export default function Page() {
               routing="path"
               path="/login"
               signUpUrl="/signup"
-              forceRedirectUrl="/onboarding"
               appearance={{
                 variables: {
                   colorPrimary: "#14543f",

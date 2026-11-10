@@ -1,11 +1,10 @@
 "use client";
 import { useEffect, useRef, useState, FormEvent } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { useRouter } from "next/navigation";
+import AccountLoading from "@/components/account-loading";
+import type { AccountProfile } from "@/lib/account-profile";
 import { api } from "@/lib/api";
-import type { components } from "../../../../packages/api-client/src/schema";
-type Profile = components["schemas"]["ProfileOut"];
 type Skill = { key: string; name: string };
 type FileEntry = {
   id: string;
@@ -13,64 +12,53 @@ type FileEntry = {
   purpose: string;
   scan_status: string;
 };
-export default function Page() {
-  return (
-    <Suspense
-      fallback={
-        <main id="main" className="auth">
-          <p role="status">Loading your profile…</p>
-        </main>
-      }
-    >
-      <Onboarding />
-    </Suspense>
-  );
-}
-function Onboarding() {
-  const router = useRouter(),
-    search = useSearchParams();
-  const [profile, setProfile] = useState<Profile | null>(null);
+export default function Onboarding({
+  initialProfile,
+  editing,
+}: {
+  initialProfile: AccountProfile;
+  editing: boolean;
+}) {
+  const router = useRouter();
+  const [profile, setProfile] = useState(initialProfile);
+  const [loaded, setLoaded] = useState(false);
   const [skills, setSkills] = useState<Skill[]>([]),
     [selected, setSelected] = useState<string[]>([]);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [step, setStep] = useState(1);
+    [step, setStep] = useState(
+      !editing && initialProfile.degree_id && initialProfile.graduation_year
+        ? 2
+        : 1,
+    );
   const [status, setStatus] = useState("");
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    if (step > 1) heading.current?.focus();
-  }, [step]);
+    if (loaded && step > 1) heading.current?.focus();
+  }, [loaded, step]);
   useEffect(() => {
     const controller = new AbortController();
     const options = { signal: controller.signal };
-    const editing = search.get("edit") === "1";
     async function load() {
       try {
-        const p = await api<Profile>("/me/profile", options);
-        if (controller.signal.aborted) return;
-        if (p.onboarding_complete && !editing) {
-          router.replace("/workspace");
-          return;
-        }
         const [catalog, chosen, uploads] = await Promise.all([
           api<Skill[]>("/skills", options),
           api<{ skill_id: string }[]>("/me/skills", options),
           api<{ items: FileEntry[] }>("/me/files", options),
         ]);
         if (controller.signal.aborted) return;
-        setProfile(p);
         setSkills(catalog);
         setSelected(chosen.map((s) => s.skill_id));
         setFiles(uploads.items);
-        if (!editing && p.degree_id && p.graduation_year) setStep(2);
+        setLoaded(true);
       } catch (failure) {
         if (!controller.signal.aborted) setError((failure as Error).message);
       }
     }
     void load();
     return () => controller.abort();
-  }, [router, search]);
+  }, []);
 
   async function finish() {
     setBusy(true);
@@ -89,7 +77,7 @@ function Onboarding() {
     setError("");
     const data = new FormData(event.currentTarget);
     try {
-      const p = await api<Profile>("/me/profile", {
+      const p = await api<AccountProfile>("/me/profile", {
         method: "PUT",
         body: JSON.stringify({
           college: data.get("college"),
@@ -119,7 +107,7 @@ function Onboarding() {
           skills: selected.map((skill_id) => ({ skill_id, level: "beginner" })),
         }),
       });
-      const updated = await api<Profile>("/me/profile", {
+      const updated = await api<AccountProfile>("/me/profile", {
         method: "PUT",
         body: JSON.stringify({
           career_interests: String(data.get("interests"))
@@ -186,17 +174,14 @@ function Onboarding() {
       setBusy(false);
     }
   }
-  if (!profile) {
-    return (
+  if (!loaded)
+    return error ? (
       <main id="main" className="workspace">
-        {error ? (
-          <p role="alert">{error}</p>
-        ) : (
-          <p role="status">Loading your workspace…</p>
-        )}
+        <p role="alert">{error}</p>
       </main>
+    ) : (
+      <AccountLoading />
     );
-  }
 
   return (
     <main id="main" className="onboarding">

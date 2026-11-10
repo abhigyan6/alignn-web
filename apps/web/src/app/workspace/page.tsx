@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
+import { requireAccountProfile } from "@/lib/account-profile";
+import AccountLoading from "@/components/account-loading";
 import { Suspense } from "react";
 import Screen from "@/components/workspace";
 async function ProtectedScreen() {
-  await auth.protect();
+  const profile = await requireAccountProfile();
+  if (!profile.onboarding_complete) redirect("/onboarding");
   return <Screen />;
 }
 export default function Page() {
@@ -13,13 +15,7 @@ export default function Page() {
   )
     redirect("/login");
   return (
-    <Suspense
-      fallback={
-        <main id="main" className="workspace">
-          <p role="status">Loading your workspace…</p>
-        </main>
-      }
-    >
+    <Suspense fallback={<AccountLoading />}>
       <ProtectedScreen />
     </Suspense>
   );

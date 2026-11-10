@@ -1,4 +1,8 @@
-import { AuthProvider, AccountControl } from "@/components/auth-provider";
+import {
+  AuthProvider,
+  AccountControl,
+  SessionBridge,
+} from "@/components/auth-provider";
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
@@ -29,7 +33,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </Link>
         <nav aria-label="Main navigation">
           <Link href="/explore">Explore</Link>
-          <Link href="/workspace">My workspace</Link>
+          <Link href="/workspace" prefetch={false}>
+            My workspace
+          </Link>
         </nav>
         {configured ? (
           <AccountControl />
@@ -39,7 +45,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </Link>
         )}
       </header>
-      {children}
+      {configured ? <SessionBridge>{children}</SessionBridge> : children}
       <footer className="site-footer">
         <strong>Find your people. Find your next step.</strong>
         <span>Alignn · Opportunities with a clearer path forward.</span>

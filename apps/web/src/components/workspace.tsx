@@ -1,43 +1,37 @@
 "use client";
 import Link from "next/link";
 import { useClerk } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
+import AccountLoading from "@/components/account-loading";
 import { useEffect, useState } from "react";
 import { api, User, Opportunity } from "@/lib/api";
 import ApplicationTracker from "@/components/application-tracker";
 export default function Workspace() {
   const { signOut } = useClerk();
-  const router = useRouter();
   const [user, setUser] = useState<User | null>(null),
     [items, setItems] = useState<Opportunity[]>([]),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true);
   useEffect(() => {
+    const controller = new AbortController();
+    const options = { signal: controller.signal };
     Promise.all([
-      api<User>("/me"),
-      api<{ items: Opportunity[] }>("/me/saved"),
-      api<{ onboarding_complete: boolean }>("/me/profile"),
+      api<User>("/me", options),
+      api<{ items: Opportunity[] }>("/me/saved", options),
     ])
-      .then(([u, s, profile]) => {
-        if (!profile.onboarding_complete) {
-          router.replace("/onboarding");
-          return;
-        }
+      .then(([u, s]) => {
+        if (controller.signal.aborted) return;
         setUser(u);
         setItems(s.items);
         setLoading(false);
       })
       .catch((e) => {
+        if (controller.signal.aborted) return;
         setError(e.message);
         setLoading(false);
       });
-  }, [router]);
-  if (loading)
-    return (
-      <main id="main" className="workspace">
-        <p role="status">Loading your workspace…</p>
-      </main>
-    );
+    return () => controller.abort();
+  }, []);
+  if (loading) return <AccountLoading />;
   return (
     <main id="main" className="workspace">
       <h1>Your workspace</h1>
