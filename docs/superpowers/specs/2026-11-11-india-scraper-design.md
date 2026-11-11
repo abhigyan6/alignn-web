@@ -4,7 +4,7 @@ Status: draft for user approval. Date: 11 November 2026.
 
 ## Intent and agreed decisions
 
-Alignn is an India-first career opportunity discovery product. The user explicitly requested removing Remotive, adding more India-focused event platforms, publishing the scraping bot privately on their GitHub account and providing a manual GitHub Actions trigger. They selected the Superpowers workflow and then selected **private JSON artifact plus local backend import**. Hosting, authentication and the existing Next.js/FastAPI/PostgreSQL modular monolith remain unchanged. No LocalStack or Docker setup is needed for this work.
+Alignn is an India-first career opportunity discovery product. The user explicitly requested removing Remotive, adding more India-focused event platforms, publishing the scraping bot privately on their GitHub account and providing a manual GitHub Actions trigger. They selected the Superpowers workflow and initially selected **private JSON artifact plus local backend import**. Their latest request extends this to **automatic production import and source-expiry checks**; manual import remains a local/recovery path. Hosting, authentication and the existing Next.js/FastAPI/PostgreSQL modular monolith remain unchanged. No LocalStack or Docker setup is needed for this work.
 
 GitHub CLI's account lookup returned `abhigyan6`. Proposed repository name (builder choice): `abhigyan6/alignn-scraper`, private. This document is not evidence that it has been created. No credentials or private account files may be read, printed, copied into the repository or requested in chat.
 
@@ -18,8 +18,10 @@ Source code in the app checkout is the maintained source; the private bot reposi
 
 ## Approaches considered
 
-1. **Private artifact and backend import — selected by the user.** Actions needs public internet access and its normal repository token only. A human downloads the JSON artifact and imports it locally through the backend CLI. This works while the app remains local and avoids granting the bot database access.
-2. **Automatic delivery to deployed backend — deferred.** Requires a reachable backend and authenticated ingestion route/credential lifecycle. The app is currently being finished locally, and hosting changes were not requested here.
+1. **Private artifacts with production worker pull — recommended revision.** GitHub collects data without database access. The deployed Python worker polls the private repository, validates a completed approved run, downloads its artifact and invokes the same backend importer automatically. The API host needs narrowly scoped repository Actions-read access. The existing local/manual import remains available for testing and recovery.
+2. **GitHub pushes to a deployed ingestion endpoint — not recommended initially.** Requires another externally reachable machine-authenticated write endpoint, delivery retries and replay controls. Worker pull reuses the existing background processing and can recover after downtime without adding that endpoint.
+
+The latest user request authorizes designing automation, not a claim that production hosting or repository credentials are already configured. Production worker-pull is the proposed implementation choice to approve in this revised design.
 
 Within the selected approach, reuse Scrapy and the existing Python interpreter rather than add an LLM browsing agent, browser automation package, database on the Actions runner, Redis or another queue. No dependency additions are assumed until the package manifest and lock are reviewed.
 
@@ -46,7 +48,7 @@ Every imported event requires explicit Indian country metadata, or an auditable 
 
 The bot supports `python -m alignn_scraper --source all --output output/opportunities.json`; `--source` accepts only the configured source names. Each source has a fixed allowlist of HTTPS hosts and permitted path forms. No arbitrary URL input, credentials, login, browser cookies, proxy rotation or CAPTCHA bypass.
 
-Reuse an identified user agent and robots handling. Proposed upper bounds: one active request per domain; at least one second between requests; 15-second request timeout; two MiB decompressed HTML per page; one retry; at most 100 detail pages per event platform; 180 seconds per source, with sources isolated into a bounded Actions matrix (maximum two source jobs concurrently, ten minutes per source job). The default all-source run explicitly reports the enabled/blocked source set. A report/merge job combines only validated source outputs. This avoids serial starvation as the source registry expands. No automatic schedule is enabled and no free-runner quota is assumed. Restrict redirects and prevent metadata/private-address fetches. Public outbound application URLs are validated and retained but never followed to submit applications.
+Reuse an identified user agent and robots handling. Proposed upper bounds: one active request per domain; at least one second between requests; 15-second request timeout; two MiB decompressed HTML per page; one retry; at most 100 detail pages per event platform; 180 seconds per source, with sources isolated into a bounded Actions matrix (maximum two source jobs concurrently, ten minutes per source job). The default all-source run explicitly reports the enabled/blocked source set. A report/merge job combines only validated source outputs. This avoids serial starvation as the source registry expands. Scheduled collection is a proposed production-only six-hour cadence; no free-runner quota is assumed and scheduling stays disabled until runner allowance and production readiness are checked. Restrict redirects and prevent metadata/private-address fetches. Public outbound application URLs are validated and retained but never followed to submit applications.
 
 Output is UTF-8 JSON with `schema_version: 1`, timezone-aware UTC `generated_at`, source reports and a normalized opportunity list. Each source report includes a fixed source key, status (`ok`, `partial`, `failed`, `empty`), successful check time, accepted/skipped/failed counts and generic error codes. Rows retain source name, stable source ID, canonical source/application URL, title, plain-text description, organizer/employer name when published, category, location, explicit country evidence, known work mode and actual registration/start/end timestamps. Use `null` for unknown timestamps; never convert event end dates to application deadlines. Inferred skills remain preferences; do not invent eligibility, stipends, verification or organizer endorsement.
 
@@ -64,33 +66,49 @@ Public catalogs are often curated/partial: missing records do not establish clos
 
 Remove Remotive listings from discovery and search, including existing imported listings, not just future ingestion. Remove Remotive scheduling and network-fetch behavior. Drain queued historical `ingest_remotive` jobs as no-ops so old jobs cannot republish data. Retire existing Remotive rows by changing status to CLOSED and bumping version only when necessary; preserve opportunity IDs, saves and application history. Add a query exclusion as protection until all old workers are restarted. Do not delete those records or their linked user data. Update source/runbook documentation so Remotive is clearly retired rather than offered as an active command.
 
-Scheduled local jobs continue to use the existing worker and PostgreSQL queue for the retained/new verified sources. The Actions workflow is manual and separate; both paths use equivalent normalization, not competing database rules.
+Local development can retain direct source jobs. In production GitHub Actions owns new-listing discovery; the existing Python worker owns artifact import, expired-date maintenance and bounded rechecks of known source listings. Avoid running duplicate full discovery crawls in production. All paths share normalization/import rules.
 
 ## Private repository and manual Actions
 
 Create the reviewed export as a private repository under `abhigyan6`. Verify repository privacy and the remote before pushing. No public publication, deployment or DNS changes. Record export origin/commit in the bot README.
 
-Workflow `Scrape Indian opportunities` has `workflow_dispatch`, a choice input for `all` or an enabled source, a single workflow concurrency group and bounded per-source matrix jobs with ten-minute timeouts (maximum two concurrent source jobs). No automatic schedule initially. A source-specific manual choice runs only that enabled adapter; `all` runs the enabled registry and reports blocked/unverified targets separately. Runner: GitHub-hosted Ubuntu with Python 3.12. Pin reviewed action revisions, use `contents: read`, disable persisted checkout credentials, and install only the standalone bot's locked dependencies. Do not expose database ports or give database, AWS, Clerk or Heroku credentials to Actions.
+Workflow `Scrape Indian opportunities` has `workflow_dispatch`, a choice input for `all` or an enabled source, a single workflow concurrency group and bounded per-source matrix jobs with ten-minute timeouts (maximum two concurrent source jobs). Keep manual `workflow_dispatch` and add a production-gated six-hour cron trigger after allowance/readiness verification. GitHub scheduling can be delayed; this is not an exact-time freshness guarantee. A source-specific manual choice runs only that enabled adapter; `all` runs the enabled registry and reports blocked/unverified targets separately. Runner: GitHub-hosted Ubuntu with Python 3.12. Pin reviewed action revisions, use `contents: read`, disable persisted checkout credentials, and install only the standalone bot's locked dependencies. Do not expose database ports or give database, AWS, Clerk or Heroku credentials to Actions.
 
 Run fixture tests before scraping. Upload only `output/opportunities.json` plus a sanitized source report as a private Actions artifact, retained seven days; write source counts/status to the job summary. Never put untrusted source text in shell commands or interpret it as GitHub workflow output. A verification manual run is authorized by the requested functional workflow; check the account's Actions restrictions/availability, do not claim remaining free minutes or enable paid runners/billing.
 
-Document the click path: repository -> Actions -> Scrape Indian opportunities -> Run workflow -> source -> Run -> download artifact -> backend dry-run -> backend import -> reload discovery. Closing the Mac does not prevent GitHub-hosted collection, but local import still requires the app database. The artifact is not an automatic live feed into Heroku or the website.
+## Automatic production handoff
 
-## What the manual button does, and does not do
+Recommended sequence: manual **Run workflow** or production-enabled cron -> per-source fetch/validation -> private artifact -> production worker poll -> backend import -> PostgreSQL -> next discovery read.
 
-The selected delivery flow is:
+The production worker checks every 60 seconds (proposed cadence) using a fine-grained token restricted to **Actions: read on the scraper repository**, or an equivalent GitHub App installation token. A human configures this privately on the backend host; never put it in frontend variables, scraper code or chat, and never inspect it through agent tools. No Heroku/PostgreSQL connection string is supplied to GitHub Actions. The worker uses its existing server-side database configuration, whichever environment is actually deployed.
 
-1. The user presses **Actions -> Scrape Indian opportunities -> Run workflow** in the private repository. GitHub's `workflow_dispatch` starts its hosted runner jobs; the laptop does not perform the collection.
-2. The bot checks source access rules and fetches current public listings. It validates Indian relevance, source URLs, IDs and real dates, and produces per-source status reports.
-3. The merge job produces the versioned JSON artifact and a sanitized summary. The user can download the artifact from that run while it remains retained. A green run is collection/export evidence, not website-update evidence.
-4. On the Mac, the user downloads the artifact, runs the backend import with `--dry-run`, then imports it into the configured local PostgreSQL database.
-5. The next discovery request reads the updated database. Existing unchanged records are preserved, new ones are inserted, changed ones are updated and expired/explicitly closed records are handled under the closure rules above. Match snapshots are recomputed through the existing worker where invalidated.
+Pin the expected repository numeric identity, workflow identity/path, default branch and allowed trigger types. Only import completed, trusted default-branch runs; ignore pull-request/unapproved-branch artifacts. Do not rely on artifact filename alone. Use a fixed artifact name, artifact ID and available digest, safe bounded ZIP handling (ten MiB uncompressed JSON cap, no path traversal/symlink extraction) and the strict schema/freshness checks above. Paginate run/artifact enumeration with a persisted cursor so busy periods and downtime cannot cause silent skipped imports.
 
-**Pressing the button alone will not update the website in the currently selected design.** It requires the backend import in step 4. GitHub cannot reach the Mac's `localhost`, and uploading an artifact is not a database write. Heroku's database is not automatically linked to the new bot repository.
+Persist run/source outcomes and import deduplication in PostgreSQL. Source check times determine update order, so an older all-source run cannot overwrite a newer source-specific result. Failed downloads/imports retry under existing worker retry limits, with visible terminal failure. A failed source does not erase existing rows. In a degraded run, import only separately validated successful/partial source data and record failures; a green GitHub collection run is not proof of successful backend import.
 
-For a future single-button website refresh, add an explicit authenticated handoff: either a deployed backend ingestion endpoint, or an app-side worker that polls/downloads approved private artifacts using narrowly scoped repository-read access. Both must call the same backend validator/importer. This would require a further design choice and runtime authentication configuration; it is not silently included in the user's previously selected manual-import approach. No database connection string goes into scraper source code. Report collected, exported, imported and visible states separately.
+On deployment/startup, enqueue a catch-up poll and expire known passed deadlines. Import only eligible unprocessed artifacts within the 24-hour freshness window; do not present an older artifact as newly fetched. If no fresh artifact exists, retain existing data with its real age and report that collection/import is pending. Artifact retention is seven days, not a seven-day import freshness promise. Production credentials and the always-running worker must be present before automatic delivery can be called working.
 
-References: https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow and https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts.
+After import, normal discovery reads use updated PostgreSQL rows and invalidated profile matches are recomputed by the existing queue. Current client views update on reload/refetch; live browser push updates are not part of this change. Any future public catalog cache must be invalidated when the import commits.
+
+Manual local/recovery flow remains: Actions -> completed run -> download artifact -> backend `--dry-run` -> backend import -> reload discovery. A GitHub runner cannot reach the Mac's `localhost`; automatic local import is possible only when a configured local worker is awake/running and has the scoped repository-read access.
+
+## Expired and closed opportunity handling
+
+Every collection/import cycle checks dates and explicit statuses, and also enqueues bounded source rechecks for previously active listings from the selected sources. This inventory comes from the application's database; the crawler repository receives no user records. The database worker resolves each stored source ID to its already validated canonical URL and applies the same source allowlist/robots/rate/time controls. Pages absent from an open-events index are individually checked rather than presumed expired. Large inventories are paginated/queued across runs, with counters for due, checked, remaining and failed; do not claim complete expiry checks if the budget was exhausted.
+
+A separate minute-cadence backend job closes known elapsed registration deadlines or ended events without waiting for GitHub. Public discovery filters must enforce those date rules at read time as well, including events with unknown registration cutoff but a known elapsed end time. Passing a start date alone is not evidence that applications closed.
+
+Decision rules:
+
+- Published registration cutoff passed, or event end passed: close/hide from active discovery; preserve the source timestamps and reason.
+- Explicit, successfully parsed registration-closed/cancelled status: close/hide with the source-check time and reason.
+- HTTP 410 for the known canonical page: close as removed. For HTTP 404, require two independent checks at least 30 minutes apart before closing as removed; reset the observation when a valid page returns.
+- Missing from catalog, unknown deadline, redirect, 403, 429, timeout, parser failure or upstream 5xx: do not infer closure; preserve the row, mark its verification stale/failed and retry within the source budget. An inaccessible page is not proof of expiry.
+- A verified deadline extension or reopening can update/reopen an ordinary source record only with newer source evidence and dates that are still valid. Retired Remotive rows can never reopen through import.
+
+Expired/removed records remain available to the user's saved/application history with closed status; do not delete those relationships. Store generic closure/recheck metadata, not raw pages, participant details or user data in artifact logs. Report newly added, updated, expired, removed, unchanged, skipped and failed checks separately.
+
+References: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule and https://docs.github.com/en/rest/actions/artifacts.
 
 ## Acceptance and verification
 
@@ -99,7 +117,9 @@ References: https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manu
 - Standalone tests run without application modules, app configuration, database services or credentials.
 - Real PostgreSQL import tests use only the dedicated test database and exercise dry-run, idempotency, freshness ordering, all-or-nothing validation, partial manifests, deadline versioning and expired/cancelled listing handling.
 - Workflow syntax/config checks; verify private repository setting, default-branch workflow visibility, successful manual dispatch and a downloadable valid artifact. Treat blocked/failed upstream sources as failures rather than fabricated coverage.
-- Import the verified artifact into the confirmed local app database, restart relevant background services, and check Indian discovery through the running API. No production import/deployment implied.
+- PostgreSQL tests for automatic import idempotency, concurrent pollers, trusted workflow/branch validation, bounded ZIP handling, retry recovery, cursor pagination, stale artifacts and out-of-order source-specific/all-source runs.
+- Expiry tests for elapsed deadlines, ended events with unknown cutoff, explicit closure/cancellation, newer reopening, two spaced 404 checks, 410 removal, blocked/rate-limited pages, partial inventory coverage and preservation of saves/application history.
+- Import the verified artifact into the confirmed local app database, restart relevant background services, and check Indian discovery through the running API. Test production handoff using a controlled environment only after the required scoped access is privately configured. No production import/deployment is implied by local tests.
 
 ## Scope exclusions and open items
 
