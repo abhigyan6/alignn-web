@@ -110,7 +110,7 @@ export default async function Page() {
               forceRedirectUrl="/auth/redirect"
               appearance={{
                 variables: {
-                  colorPrimary: "#14543f",
+                  colorPrimary: "#123e2f",
                   colorBackground: "#f4f2e9",
                   borderRadius: "12px",
                   fontFamily: "Manrope, sans-serif",

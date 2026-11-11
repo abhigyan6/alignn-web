@@ -24,6 +24,9 @@ export default function Explore() {
     [attempt, setAttempt] = useState(0),
     [polls, setPolls] = useState(0);
   useEffect(() => {
+    setPolls(0);
+  }, [kind, search, sort]);
+  useEffect(() => {
     if (rank !== "PENDING" || sort !== "match" || polls >= 6) return;
     const timer = setTimeout(() => {
       setPolls((value) => value + 1);
@@ -32,6 +35,7 @@ export default function Explore() {
     return () => clearTimeout(timer);
   }, [rank, sort, attempt, polls]);
   useEffect(() => {
+    const controller = new AbortController();
     let active = true;
     setLoading(true);
     setError("");
@@ -46,7 +50,7 @@ export default function Explore() {
       items: Opportunity[];
       ranking_status: string;
       next_cursor: number | null;
-    }>("/opportunities?" + params)
+    }>("/opportunities?" + params, { signal: controller.signal })
       .then((data) => {
         if (active) {
           setItems(data.items);
@@ -62,6 +66,7 @@ export default function Explore() {
       });
     return () => {
       active = false;
+      controller.abort();
     };
   }, [kind, search, sort, cursor, attempt]);
   function submit(e: FormEvent) {

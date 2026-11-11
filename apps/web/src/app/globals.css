@@ -3,12 +3,14 @@
 @import "@fontsource/manrope/latin-700.css";
 @import "@fontsource/manrope/latin-800.css";
 :root {
-  --paper: #f5f7fc;
+  --paper: #f5f6f0;
   --surface: #fff;
-  --ink: #17213d;
-  --muted: #52617b;
-  --line: #dce3ef;
-  --accent: #2344dc;
+  --ink: #1d3027;
+  --muted: #53685b;
+  --line: #d4ded5;
+  --accent: #123e2f;
+  --accent-soft: #eaf2e6;
+  --accent-hover: #20563f;
   --focus: #b46200;
   --space: 4px;
 }
@@ -111,7 +113,7 @@ nav {
   text-align: center;
 }
 .secondary {
-  background: #edf1ff;
+  background: var(--accent-soft);
   color: var(--accent);
 }
 main {
@@ -142,7 +144,7 @@ main {
   margin: 0 auto 24px;
   place-items: center;
   color: var(--accent);
-  background: #e7edff;
+  background: #e7eee3;
   border-radius: 18px;
 }
 .coming-soon-mark svg {
@@ -221,7 +223,7 @@ p {
   position: relative;
   display: grid;
   place-items: center;
-  background: #e7edff;
+  background: #e7eee3;
   overflow: hidden;
   border-radius: 12px;
 }
@@ -229,19 +231,19 @@ p {
   position: absolute;
   width: 220px;
   height: 120px;
-  border: 25px solid #2344dc;
+  border: 25px solid #123e2f;
   border-radius: 50%;
   transform: rotate(-42deg);
 }
 .loop-art i:nth-child(2) {
   transform: rotate(48deg);
-  border-color: #8ca5ed;
+  border-color: #a9c994;
 }
 .loop-art span {
   position: absolute;
   bottom: 20px;
   left: 24px;
-  color: #203b88;
+  color: #123e2f;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -254,7 +256,7 @@ p {
 .category-bar button {
   white-space: nowrap;
   border: 0;
-  background: #e7ecf6;
+  background: #e7eee3;
 }
 .category-bar button[aria-pressed="true"] {
   background: var(--ink);
@@ -262,7 +264,7 @@ p {
 }
 .marketplace {
   display: grid;
-  grid-template-columns: 235px 1fr;
+  grid-template-columns: 235px minmax(0, 1fr);
   gap: 40px;
   padding: 24px 0 72px;
 }
@@ -299,6 +301,8 @@ p {
   gap: 24px;
 }
 .event {
+  min-width: 0;
+  overflow-wrap: anywhere;
   background: white;
   border-radius: 8px;
   overflow: hidden;
@@ -310,7 +314,7 @@ p {
 }
 .poster {
   min-height: 185px;
-  background: #e3eaff;
+  background: #e7eee3;
   padding: 22px;
   display: flex;
   flex-direction: column;
@@ -359,7 +363,7 @@ p {
 }
 .empty {
   padding: 48px 32px;
-  background: #eaf0f8;
+  background: #edf2e9;
   max-width: 100%;
   margin: 20px 0;
 }
@@ -650,7 +654,7 @@ body:has(.auth-page) .site-footer {
 .detail-poster {
   padding: 48px;
   margin: 24px 0;
-  background: #e3eaff;
+  background: #e7eee3;
 }
 .detail-poster h1 {
   max-width: 850px;
@@ -823,10 +827,6 @@ body:has(.auth-page) .site-footer {
 }
 
 .onboarding {
-  --accent: #123e2f;
-  --ink: #1d3027;
-  --muted: #53685b;
-  --line: #d4ded5;
   display: grid;
   grid-template-columns: 290px minmax(0, 650px);
   gap: clamp(40px, 7vw, 100px);
@@ -835,9 +835,6 @@ body:has(.auth-page) .site-footer {
   padding: 64px 24px 88px;
   color: var(--ink);
   align-items: start;
-}
-body:has(.onboarding) {
-  background: #f5f6f0;
 }
 .onboarding-guide {
   padding-top: 10px;
@@ -998,7 +995,7 @@ body:has(.onboarding) {
   font-size: 14px;
 }
 .onboarding .button:hover {
-  background: #20563f;
+  background: var(--accent-hover);
 }
 .onboarding .error {
   padding: 14px 16px;
@@ -1028,7 +1025,7 @@ body:has(.onboarding) {
 }
 .onboarding .skill-options label:has(:checked) {
   border-color: var(--accent);
-  background: #eaf2e6;
+  background: var(--accent-soft);
 }
 .onboarding input[type="checkbox"] {
   accent-color: var(--accent);

@@ -1,7 +1,6 @@
 import "server-only";
 import { apiOrigin } from "./api-origin";
 import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import type { components } from "../../../../packages/api-client/src/schema";
 
 export type AccountProfile = components["schemas"]["ProfileOut"];
@@ -9,7 +8,8 @@ export type AccountProfile = components["schemas"]["ProfileOut"];
 export async function requireAccountProfile(): Promise<AccountProfile> {
   const { getToken } = await auth.protect();
   const token = await getToken();
-  if (!token) redirect("/login");
+  if (!token)
+    throw new Error("Your account session is temporarily unavailable.");
 
   const backend = apiOrigin();
   if (!backend) throw new Error("Account service is unavailable.");

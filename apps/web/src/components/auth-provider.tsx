@@ -23,7 +23,12 @@ export function SessionBridge({ children }: { children: React.ReactNode }) {
     return () => setTokenGetter(null);
   }, [isLoaded]);
 
-  return pathname === "/" || ready ? children : <AccountLoading />;
+  const authPage =
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/signup" ||
+    pathname.startsWith("/signup/");
+  return pathname === "/" || authPage || ready ? children : <AccountLoading />;
 }
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -35,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUpFallbackRedirectUrl="/auth/redirect"
       appearance={{
         variables: {
-          colorPrimary: "#2344dc",
+          colorPrimary: "#123e2f",
           fontFamily: "Manrope, Arial, sans-serif",
           borderRadius: "6px",
         },
