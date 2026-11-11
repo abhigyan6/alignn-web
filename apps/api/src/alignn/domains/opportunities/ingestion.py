@@ -1,4 +1,4 @@
-"""Public Remotive feed; no credentials, redirects, or arbitrary fetch URLs."""
+"""Legacy retirement and local source scheduling. Remotive never fetches."""
 
 import argparse
 import re
@@ -7,13 +7,10 @@ from html.parser import HTMLParser
 from urllib.parse import urlsplit
 from uuid import NAMESPACE_URL, uuid5
 
-import httpx
-from sqlalchemy import select, text
+from sqlalchemy import select
 
 from alignn.db import SessionLocal, utcnow
 from alignn.domains.opportunities.models import Opportunity
-from alignn.domains.organizations.models import Organization
-from alignn.domains.profiles.models import Skill
 
 FEED_URL = "https://remotive.com/api/remote-jobs"
 SOURCE = "Remotive"
@@ -99,104 +96,18 @@ def normalize(row):
     )
 
 
-def fetch_feed(client):
-    with client.stream("GET", FEED_URL) as response:
-        response.raise_for_status()
-        content = bytearray()
-        for chunk in response.iter_bytes():
-            content.extend(chunk)
-            if len(content) > 10 * 1024 * 1024:
-                raise ValueError("Feed exceeds size limit")
-    import json
-
-    payload = json.loads(content)
-    rows = payload.get("jobs")
-    if not isinstance(rows, list) or not rows or payload.get("job-count") != len(rows):
-        raise ValueError("Incomplete feed; keeping previous catalog")
-    # Validate the entire snapshot before writes or closing any existing listings.
-    normalized = [normalize(row) for row in rows]
-    if len({row["source_id"] for row in normalized}) != len(normalized):
-        raise ValueError("Duplicate source IDs")
-    return normalized
-
-
 def sync_remotive(client=None):
+    """Compatibility entry point: retire old rows and never contact the source."""
+    from .visibility import expire_opportunities
+
     with SessionLocal.begin() as db:
-        # One source sync at a time, including fetch and the six-hour throttle.
-        db.execute(text("SELECT pg_advisory_xact_lock(8134091)"))
-        org = db.get(Organization, SOURCE_ORG)
-        latest = db.scalar(
-            select(Opportunity.source_checked_at)
-            .where(Opportunity.source_name == SOURCE)
-            .order_by(Opportunity.source_checked_at.desc())
-            .limit(1)
-        )
-        now = utcnow()
-        if latest and now - latest < timedelta(hours=6):
-            return {"status": "throttled", "imported": 0}
-        if client is None:
-            with httpx.Client(
-                timeout=15,
-                follow_redirects=False,
-                headers={"User-Agent": "Alignn/0.1 (public opportunity feed)"},
-            ) as http:
-                rows = fetch_feed(http)
-        else:
-            rows = fetch_feed(client)
-        if not org:
-            org = Organization(
-                id=SOURCE_ORG,
-                name="Remotive public feed",
-                website="https://remotive.com",
-                verified=False,
-            )
-            db.add(org)
-            db.flush()
-        catalog = db.scalars(select(Skill)).all()
-        seen = set()
-        for values in rows:
-            values["preferred_skills"] = inferred_skills(catalog, values)
-            source_id = values["source_id"]
-            seen.add(source_id)
-            row = db.scalar(
-                select(Opportunity).where(
-                    Opportunity.source_name == SOURCE, Opportunity.source_id == source_id
-                )
-            )
-            if row is None:
-                row = Opportunity(organization_id=SOURCE_ORG, **values)
-                db.add(row)
-            elif (
-                any(getattr(row, key) != value for key, value in values.items())
-                or row.status != "PUBLISHED"
-            ):
-                for key, value in values.items():
-                    setattr(row, key, value)
-                row.version += 1
-            row.status = "PUBLISHED"
-            row.source_checked_at = now
-        for row in db.scalars(
-            select(Opportunity).where(
-                Opportunity.source_name == SOURCE, Opportunity.status == "PUBLISHED"
-            )
-        ):
-            if row.source_id not in seen:
-                row.status = "CLOSED"
-                row.version += 1
-        return {"status": "synced", "imported": len(rows)}
+        closed = expire_opportunities(db, utcnow())
+    return {"status": "retired", "imported": 0, "closed": closed}
 
 
 def schedule_ingestion(db, now):
     from alignn.jobs.worker import enqueue_job
 
-    enqueue_job(
-        db,
-        kind="ingest_remotive",
-        key=f"ingest-remotive-{now.date()}-{now.hour // 6}",
-        payload={},
-        run_at=now,
-        expires_at=now + timedelta(hours=6),
-    )
     enqueue_job(
         db,
         kind="ingest_devfolio",
@@ -216,7 +127,7 @@ def schedule_ingestion(db, now):
             run_at=now,
             expires_at=now + timedelta(hours=6),
         )
-    return 2 + len(BOARDS)
+    return 1 + len(BOARDS)
 
 
 def main():

@@ -6,7 +6,12 @@ from alignn.db import SessionLocal, utcnow
 from alignn.domains.opportunities.ingestion import schedule_ingestion
 from alignn.jobs.retention import prune_retired_event_data
 
-SCHEDULES = [schedule_ingestion, prune_retired_event_data]
+def expire_catalog(db, now):
+    from alignn.domains.opportunities.visibility import expire_opportunities
+    return expire_opportunities(db, now)
+
+
+SCHEDULES = [schedule_ingestion, prune_retired_event_data, expire_catalog]
 
 
 def tick():

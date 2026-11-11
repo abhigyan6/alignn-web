@@ -1,6 +1,6 @@
 # India-first opportunity bot and private manual Actions
 
-Status: draft for user approval. Date: 11 November 2026.
+Status: approved for implementation by the user; audit clarifications below are binding. Date: 11 November 2026.
 
 ## Intent and agreed decisions
 
@@ -126,3 +126,7 @@ References: https://docs.github.com/en/actions/reference/workflows-and-actions/e
 No event hosting, registrations, teams, judging, auto-applications, resume transmission, new auth flows, AI eligibility decisions or scraper dashboard. No new cloud infrastructure, LocalStack, database move or claim of complete India coverage.
 
 Builder choices: source-specific parsing selectors, internal module names, fixture sanitization and export mechanics may be decided during the implementation plan, preserving these contracts. Unverified platform access is a source gate, not permission to bypass restrictions. Exact source substitution must be recorded if KonfHub fails its gate. Repository creation or an external Actions run blocked by account permissions must be reported accurately; source validation work can continue independently.
+
+## Approved audit clarifications (11 November)
+
+The implementation plan dated 11 November resolves F1–F10: independently atomic source receipts, record observation fencing, byte-aware chunk manifests (80 MiB total uncompressed/25 MiB ZIP, replacing the conflicting ten-MiB total), isolated maintenance/collection lanes, safe authenticated GitHub redirects and bounded rechecks. Exact contracts and tests are in its Global constraints section. Production cron remains disabled until readiness and account allowance are checked. Stale-but-unverified records are not automatically labelled expired or suppressed after an unapproved duration. Capacity assumptions remain estimates; matching keeps global semantics. The automatic pipeline is implemented from the outset; manual import is recovery/testing only.

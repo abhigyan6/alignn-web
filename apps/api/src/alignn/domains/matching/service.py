@@ -1,6 +1,6 @@
 import re
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 
 from alignn.domains.opportunities.models import MatchSnapshot, Opportunity
@@ -28,12 +28,17 @@ def overlap(a, b):
     return 100 * len(a & b) / len(b) if b else 0
 
 
-def calculate_fit(db, user_id, opportunity):
+def profile_evidence(db, user_id):
     p = db.scalar(select(Profile).where(Profile.user_id == user_id))
     owned = set(
         db.scalars(select(Skill.key).join(ProfileSkill).where(ProfileSkill.user_id == user_id))
     )
     projects = db.scalars(select(Project).where(Project.user_id == user_id)).all()
+    return p, owned, projects
+
+
+def calculate_fit(db, user_id, opportunity, evidence=None):
+    p, owned, projects = evidence if evidence is not None else profile_evidence(db, user_id)
     required = set(opportunity.required_skills + opportunity.preferred_skills)
     project_skills = {k for project in projects for k in project.skill_ids}
     factors = [
@@ -70,15 +75,18 @@ def calculate_fit(db, user_id, opportunity):
 
 
 def rebuild_matches(user_id):
-    from alignn.db import SessionLocal
+    from alignn.db import SessionLocal, utcnow
+    from alignn.domains.opportunities.visibility import active_filters
 
     with SessionLocal.begin() as db:
-        for o in db.scalars(
-            select(Opportunity).where(
-                Opportunity.status == "PUBLISHED", Opportunity.mode == "EXTERNAL"
-            )
-        ).yield_per(100):
-            result = calculate_fit(db, user_id, o)
+        active = select(Opportunity).where(*active_filters(utcnow()))
+        db.execute(delete(MatchSnapshot).where(
+            MatchSnapshot.user_id == user_id,
+            MatchSnapshot.opportunity_id.not_in(active.with_only_columns(Opportunity.id)),
+        ))
+        evidence = profile_evidence(db, user_id)
+        for o in db.scalars(active).yield_per(100):
+            result = calculate_fit(db, user_id, o, evidence)
             values = dict(
                 user_id=user_id,
                 opportunity_id=o.id,
