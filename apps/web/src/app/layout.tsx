@@ -2,6 +2,8 @@ import { AuthProvider, SessionBridge } from "@/components/auth-provider";
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import AppNavigation from "@/components/app-navigation";
+import SiteIntro, { introScript } from "@/components/site-intro";
 export const metadata: Metadata = {
   title: "Alignn · Coming soon",
   description: "Alignn is building a clearer path to your next opportunity.",
@@ -26,6 +28,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </svg>
           alignn
         </Link>
+        <AppNavigation authenticated={configured} />
       </header>
       {configured ? <SessionBridge>{children}</SessionBridge> : children}
       <footer className="site-footer">
@@ -35,8 +38,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     </>
   );
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: introScript }} />
+        <SiteIntro />
         {configured ? <AuthProvider>{content}</AuthProvider> : content}
       </body>
     </html>

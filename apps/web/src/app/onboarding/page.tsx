@@ -21,7 +21,7 @@ export default function Page({ searchParams }: { searchParams: SearchParams }) {
   )
     redirect("/login");
   return (
-    <Suspense fallback={<AccountLoading />}>
+    <Suspense fallback={<AccountLoading onboarding />}>
       <ProtectedScreen searchParams={searchParams} />
     </Suspense>
   );

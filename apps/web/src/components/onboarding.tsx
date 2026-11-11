@@ -180,7 +180,7 @@ export default function Onboarding({
         <p role="alert">{error}</p>
       </main>
     ) : (
-      <AccountLoading />
+      <AccountLoading onboarding />
     );
 
   return (

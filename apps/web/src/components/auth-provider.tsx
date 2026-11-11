@@ -3,6 +3,7 @@ import { ClerkProvider, useAuth, UserButton } from "@clerk/nextjs";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import DiscoveryLoading from "@/components/discovery-loading";
 import AccountLoading from "@/components/account-loading";
 import { setTokenGetter } from "@/lib/api";
 
@@ -28,7 +29,12 @@ export function SessionBridge({ children }: { children: React.ReactNode }) {
     pathname.startsWith("/login/") ||
     pathname === "/signup" ||
     pathname.startsWith("/signup/");
-  return pathname === "/" || authPage || ready ? children : <AccountLoading />;
+  if (!ready && pathname === "/explore") return <DiscoveryLoading />;
+  return pathname === "/" || authPage || ready ? (
+    children
+  ) : (
+    <AccountLoading onboarding={pathname.startsWith("/onboarding")} />
+  );
 }
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (

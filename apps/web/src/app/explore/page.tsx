@@ -1,4 +1,5 @@
 "use client";
+import OpportunitySkeleton from "@/components/opportunity-skeleton";
 import Link from "next/link";
 import { useEffect, useState, FormEvent } from "react";
 import { api, Opportunity } from "@/lib/api";
@@ -202,9 +203,7 @@ export default function Explore() {
               <button onClick={() => setAttempt(attempt + 1)}>Try again</button>
             </div>
           ) : loading ? (
-            <p role="status" className="empty">
-              Finding opportunities…
-            </p>
+            <OpportunitySkeleton />
           ) : items.length ? (
             <div className="event-grid">
               {items.map((o) => (

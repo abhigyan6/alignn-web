@@ -17,3 +17,13 @@ Alignn helps students identify opportunities that fit their education, interests
 ## Verification status
 
 Discovery was inspected at 360, 390, 768 and 1440px using explicit synthetic browser fixtures. Long-title clipping was reproduced and fixed. Shared palette consolidation has started. Full auth, onboarding, details, workspace and tracking visual acceptance remains pending.
+
+## Loading and interaction rules
+
+- The brand reveal is decorative, lasts about 1.2 seconds, and runs once per browser tab using sessionStorage. Input dismisses it. Reduced-motion users skip the reveal entirely. Storage failures leave content available.
+- Use the shared BrandLoader symbol for account preparation. Match skeleton structures to discovery cards or the onboarding form rather than swapping entire layouts for a spinner.
+- Skeleton shapes are hidden from assistive technology, with one status announcement and an aria-busy container. Remove them when data or an error arrives.
+- Use shared 140ms interaction and 240ms surface-transition tokens. Hover effects apply only on devices that support hover. Reduced motion disables moving loader/shimmer effects and press/lift transforms.
+- Application pages show Discover and My workspace links with active-page semantics. The public coming-soon homepage stays focused on its existing content.
+
+Verified in the November 11 loading pass: production build and formatting, 22 desktop/mobile browser checks for loading, reduced motion, sign-in guards and title wrapping, and separate delayed-results screenshot checks. Native Edge inspection confirmed the application navigation. These checks do not establish full signed-in onboarding acceptance.

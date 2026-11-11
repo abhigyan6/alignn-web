@@ -1188,3 +1188,335 @@ fieldset {
 .tracker-history p {
   white-space: pre-wrap;
 }
+
+/* Shared feedback and interaction states. */
+:root {
+  --motion-fast: 140ms;
+  --motion-standard: 240ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --skeleton-base: #e5ebe2;
+}
+.button,
+button,
+.event,
+.saved-row {
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-standard),
+    transform var(--motion-fast) var(--ease-out);
+}
+.button:active,
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+button,
+select {
+  min-height: 44px;
+}
+.event:focus-visible {
+  outline-offset: 4px;
+}
+@media (hover: hover) {
+  .button:not(.secondary):hover {
+    background: var(--accent-hover);
+    text-decoration: none;
+  }
+  .event:hover {
+    outline: none;
+    box-shadow: 0 8px 24px rgb(18 62 47 / 9%);
+    transform: translateY(-2px);
+  }
+  .saved-row:hover {
+    background: var(--accent-soft);
+  }
+  .category-bar button:hover:not([aria-pressed="true"]) {
+    background: var(--line);
+  }
+}
+.brand-loader {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+.brand-loader-symbol {
+  width: 42px;
+  height: 42px;
+  animation: brand-breathe 1800ms ease-in-out infinite;
+}
+.brand-loader-orbit {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  animation: brand-orbit 2400ms linear infinite;
+}
+.brand-loader-orbit > span {
+  position: absolute;
+  top: -3px;
+  left: calc(50% - 3px);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+@keyframes brand-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes brand-breathe {
+  50% {
+    opacity: 0.65;
+    transform: scale(0.96);
+  }
+}
+.site-intro {
+  display: none;
+}
+html[data-alignn-intro] .site-intro {
+  display: grid;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  place-items: center;
+  background: var(--paper);
+  pointer-events: none;
+  animation: intro-dismiss 1200ms var(--ease-out) forwards;
+}
+.site-intro-lockup {
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+  padding: 24px;
+  text-align: center;
+}
+.site-intro .brand-loader {
+  width: 104px;
+  height: 104px;
+}
+.site-intro .brand-loader-symbol {
+  width: 62px;
+  height: 62px;
+}
+.site-intro-name {
+  font-size: clamp(48px, 9vw, 72px);
+  letter-spacing: -0.07em;
+  font-weight: 800;
+  line-height: 1;
+}
+.intro-period {
+  color: #73945e;
+}
+.site-intro-caption {
+  color: var(--muted);
+  font-size: 14px;
+}
+@keyframes intro-dismiss {
+  0%,
+  70% {
+    opacity: 1;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+.skeleton {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--skeleton-base);
+  max-width: 100%;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 65%),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: skeleton-sweep 1800ms ease-in-out infinite;
+}
+@keyframes skeleton-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+.skeleton-label {
+  width: 40%;
+  height: 13px;
+}
+.skeleton-heading {
+  width: 95%;
+  height: 28px;
+}
+.skeleton-line {
+  width: 90%;
+  height: 16px;
+}
+.skeleton-icon {
+  width: 36px;
+  height: 13px;
+}
+.skeleton.short {
+  width: 64%;
+}
+.skeleton-poster {
+  justify-content: center;
+  background: var(--accent-soft);
+}
+.skeleton-card {
+  border: 1px solid var(--line);
+}
+.skeleton-card-body {
+  display: grid;
+  gap: 16px;
+}
+.skeleton-card-body .event-bottom {
+  margin-top: 8px;
+}
+.account-skeleton {
+  padding-top: 48px;
+  padding-bottom: 64px;
+}
+.account-loading-heading {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  max-width: 540px;
+}
+.account-loading-heading h1 {
+  margin: 0;
+  font-size: clamp(24px, 3vw, 32px);
+  line-height: 1.2;
+}
+.loading-eyebrow {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted);
+}
+.account-skeleton-content {
+  display: grid;
+  gap: 18px;
+  padding: 36px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.account-skeleton.workspace .account-skeleton-content {
+  max-width: 680px;
+  margin-top: 32px;
+}
+.skeleton-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 16px 0;
+}
+.skeleton-field {
+  width: 100%;
+  height: 48px;
+}
+.skeleton-action {
+  width: 150px;
+  height: 44px;
+  justify-self: end;
+}
+@media (max-width: 520px) {
+  .account-loading-heading {
+    gap: 14px;
+  }
+  .account-skeleton-content {
+    padding: 24px;
+  }
+  .skeleton-fields {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-loader-symbol,
+  .brand-loader-orbit,
+  .skeleton::after {
+    animation: none;
+  }
+  html[data-alignn-intro] .site-intro {
+    display: none;
+  }
+  .button,
+  button,
+  .event,
+  .saved-row {
+    transition: none;
+  }
+  .event:hover,
+  .button:active,
+  button:active:not(:disabled) {
+    transform: none;
+  }
+}
+.app-navigation {
+  align-items: center;
+}
+.app-navigation a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+}
+.app-navigation a[aria-current="page"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.header-account {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 96px;
+  min-height: 44px;
+  margin-left: auto;
+  font-size: 13px;
+}
+.discovery-skeleton {
+  padding-top: 56px;
+  padding-bottom: 72px;
+}
+.discovery-skeleton-heading {
+  display: grid;
+  gap: 20px;
+  max-width: 650px;
+  margin-bottom: 56px;
+}
+.discovery-skeleton-heading .skeleton-heading {
+  height: 60px;
+}
+@media (max-width: 520px) {
+  .app-navigation {
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .discovery-skeleton {
+    padding-top: 36px;
+  }
+  .discovery-skeleton-heading {
+    margin-bottom: 40px;
+  }
+}
