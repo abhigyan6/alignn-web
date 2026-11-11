@@ -4,14 +4,14 @@ import json
 from datetime import timedelta
 from uuid import uuid4
 
-from sqlalchemy import or_, select
-from sqlalchemy.dialects.postgresql import insert
-
-from alignn.db import SessionLocal, utcnow
 from alignn_scraper.models import SourceResult
 from alignn_scraper.parsers import parse_devfolio, parse_greenhouse, parse_hackindia, parse_luma
 from alignn_scraper.registry import SOURCES
 from alignn_scraper.transport import FetchError, PublicHTTP
+from sqlalchemy import or_, select
+from sqlalchemy.dialects.postgresql import insert
+
+from alignn.db import SessionLocal, utcnow
 
 from .import_scraped import apply_source
 from .ingestion_models import ScraperCursor
@@ -91,11 +91,14 @@ def recheck_source(source):
                 if source.startswith("greenhouse-"):
                     if board_data is None:
                         payload = json.loads(http.get(SOURCES[source].indexes[0]))
-                        board_data = payload["jobs"]
-                        if not isinstance(board_data, list) or payload["meta"]["total"] != len(
-                            board_data
+                        candidate = payload["jobs"]
+                        if (
+                            not isinstance(candidate, list)
+                            or payload["meta"]["total"] != len(candidate)
+                            or len({str(item["id"]) for item in candidate}) != len(candidate)
                         ):
                             raise ValueError("incomplete_board")
+                        board_data = candidate
                     raw = next((r for r in board_data if str(r["id"]) == source_id), None)
                     # A complete documented ATS snapshot can explicitly report absence.
                     if raw is None:

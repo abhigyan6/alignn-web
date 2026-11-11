@@ -46,7 +46,7 @@ class Page(HTMLParser):
             if attrs.get("type") == "application/ld+json":
                 value = json.loads("".join(parts))
                 for item in value if isinstance(value, list) else [value]:
-                    if item.get("@type") == "Event":
+                    if isinstance(item, dict) and item.get("@type") == "Event":
                         return item
         raise ValueError("event_metadata_missing")
 
@@ -93,6 +93,8 @@ def date(value):
 
 
 def ld_observation(ld, source, url, identity, now, deadline=None, state=None):
+    if not isinstance(ld.get("name"), str) or not isinstance(ld.get("description", ""), str):
+        raise ValueError("event_metadata_invalid")
     title = ld["name"]
     description = plain(ld.get("description", ""))
     if source == "luma" and not re.search(
@@ -104,6 +106,14 @@ def ld_observation(ld, source, url, identity, now, deadline=None, state=None):
     locations = ld.get("location", {})
     locations = locations if isinstance(locations, list) else [locations]
     addresses = [loc.get("address", {}) for loc in locations if isinstance(loc, dict)]
+    # Explicit conflicting country metadata cannot be overridden by prose/timezone.
+    countries = [
+        a.get("addressCountry")
+        for a in addresses
+        if isinstance(a, dict) and a.get("addressCountry")
+    ]
+    if any(not isinstance(country, str) or country not in {"IN", "India"} for country in countries):
+        return None
     address = next(
         (
             a
@@ -122,11 +132,15 @@ def ld_observation(ld, source, url, identity, now, deadline=None, state=None):
             description,
             re.I,
         )
-        if not match:
+        if not match or re.search(
+            r"\b(not|never|except|excluding|unavailable|ineligible|cannot)\b", match.group(), re.I
+        ):
             return None
         evidence = {"kind": "official_audience", "statement": match.group().strip(), "url": url}
         location = "India (online audience)"
-    status = ld.get("eventStatus", "")
+    status = ld.get("eventStatus") or ""
+    if not isinstance(status, str):
+        raise ValueError("event_status_invalid")
     state = "CANCELLED" if status.endswith("EventCancelled") else state or "OPEN"
     organizer = ld.get("organizer", [])
     organizer = organizer if isinstance(organizer, list) else [organizer]
@@ -138,7 +152,9 @@ def ld_observation(ld, source, url, identity, now, deadline=None, state=None):
         ),
         None,
     )
-    attendance = ld.get("eventAttendanceMode", "")
+    attendance = ld.get("eventAttendanceMode") or ""
+    if not isinstance(attendance, str):
+        raise ValueError("event_attendance_invalid")
     mode = (
         "REMOTE"
         if attendance.endswith("/OnlineEventAttendanceMode")

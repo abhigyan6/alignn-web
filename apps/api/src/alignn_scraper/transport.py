@@ -49,7 +49,10 @@ class PublicHTTP:
             self.requests += 1
             self.last[host] = time.monotonic()
             if self.owns:
-                addresses = socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+                try:
+                    addresses = socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+                except OSError as exc:
+                    raise FetchError("network_failure") from exc
                 if not addresses or any(
                     not ipaddress.ip_address(a[4][0]).is_global for a in addresses
                 ):

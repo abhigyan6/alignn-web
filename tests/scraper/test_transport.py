@@ -25,9 +25,7 @@ def test_robots_disallow_and_redirect_are_not_followed():
 
     with httpx.Client(transport=httpx.MockTransport(redirect)) as client:
         with pytest.raises(FetchError):
-            PublicHTTP("hackindia", client=client, delay=0).get(
-                "https://hackindia.org/hackathons"
-            )
+            PublicHTTP("hackindia", client=client, delay=0).get("https://hackindia.org/hackathons")
 
 
 def test_response_and_request_count_limits():
@@ -40,6 +38,18 @@ def test_response_and_request_count_limits():
 
     with httpx.Client(transport=httpx.MockTransport(large)) as client:
         with pytest.raises(FetchError):
-            PublicHTTP("hackindia", client=client, delay=0).get(
-                "https://hackindia.org/hackathons"
-            )
+            PublicHTTP("hackindia", client=client, delay=0).get("https://hackindia.org/hackathons")
+
+
+def test_dns_failure_is_a_controlled_source_failure(monkeypatch):
+    import socket
+
+    def broken(*args, **kwargs):
+        raise socket.gaierror("fixture DNS failure")
+
+    monkeypatch.setattr(socket, "getaddrinfo", broken)
+    with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200))) as client:
+        http = PublicHTTP("hackindia", client=client, delay=0)
+        http.owns = True
+        with pytest.raises(FetchError):
+            http.get("https://hackindia.org/hackathons")

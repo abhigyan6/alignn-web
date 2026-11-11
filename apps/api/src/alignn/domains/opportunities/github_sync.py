@@ -9,7 +9,6 @@ from datetime import timedelta
 from urllib.parse import urlsplit
 
 import httpx
-
 from alignn_scraper.bundle import MAX_ZIP, digest
 
 API = "https://api.github.com"
@@ -171,7 +170,7 @@ def unwrap_artifact(packed, expected_digest):
         return z.read(infos[0])
 
 
-def poll(settings):
+def _poll(settings):
     from alignn.db import SessionLocal, utcnow
     from alignn.jobs.worker import enqueue_job
 
@@ -307,5 +306,77 @@ def import_artifact(settings, payload):
             receipt.state = "APPLIED"
             receipt.counts = outcome
         return outcome
+    except Exception:
+        # Values/errors from providers may contain signed URLs. Store only a fixed code.
+        from sqlalchemy import select
+
+        from alignn.jobs.models import Job
+
+        with SessionLocal.begin() as db:
+            receipt = ensure_receipt(db, identity, "__artifact__", payload["digest"][7:])
+            job = db.scalar(
+                select(Job).where(
+                    Job.key
+                    == f"scraper-{identity['run_id']}-{identity['run_attempt']}-{identity['artifact_id']}"
+                )
+            )
+            if receipt.state not in {"APPLIED", "REJECTED"}:
+                receipt.state = "FAILED" if job and job.attempts >= 5 else "RETRYABLE"
+                receipt.error = "artifact_delivery_failed"
+        raise
     finally:
         reader.close()
+
+
+def poll(settings):
+    """Durable backoff applies to new minute jobs as well as retries of one job."""
+    from datetime import datetime
+
+    from sqlalchemy import select
+    from sqlalchemy.dialects.postgresql import insert
+
+    from alignn.db import SessionLocal, utcnow
+
+    from .ingestion_models import ScraperCursor
+
+    now = utcnow()
+    with SessionLocal.begin() as db:
+        db.execute(
+            insert(ScraperCursor)
+            .values(key="github-poll-state", value={})
+            .on_conflict_do_nothing(index_elements=["key"])
+        )
+        cursor = db.scalar(
+            select(ScraperCursor).where(ScraperCursor.key == "github-poll-state").with_for_update()
+        )
+        if cursor.value.get("next_at") and datetime.fromisoformat(cursor.value["next_at"]) > now:
+            return 0
+        previous = cursor.value
+        cursor.value = {**previous, "next_at": (now + timedelta(minutes=2)).isoformat()}
+    try:
+        count = _poll(settings)
+    except Exception:
+        with SessionLocal.begin() as db:
+            cursor = db.scalar(
+                select(ScraperCursor)
+                .where(ScraperCursor.key == "github-poll-state")
+                .with_for_update()
+            )
+            failures = min(10, int(previous.get("failures", 0)) + 1)
+            cursor.value = {
+                "failures": failures,
+                "next_at": (utcnow() + timedelta(seconds=min(3600, 60 * 2**failures))).isoformat(),
+                "last_failure_at": utcnow().isoformat(),
+                "error": "github_poll_failed",
+            }
+        raise
+    with SessionLocal.begin() as db:
+        cursor = db.scalar(
+            select(ScraperCursor).where(ScraperCursor.key == "github-poll-state").with_for_update()
+        )
+        cursor.value = {
+            "failures": 0,
+            "next_at": (utcnow() + timedelta(seconds=60)).isoformat(),
+            "last_success_at": utcnow().isoformat(),
+        }
+    return count

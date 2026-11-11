@@ -21,10 +21,7 @@ def test_export_contains_only_standalone_files(tmp_path):
     assert not list(target.rglob(".env*"))
     assert not (target / ".git").exists()
     for file in target.glob("src/**/*.py"):
-        assert (
-            "from alignn." not in file.read_text()
-            and "import alignn." not in file.read_text()
-        )
+        assert "from alignn." not in file.read_text() and "import alignn." not in file.read_text()
     workflow = (target / ".github/workflows/scrape.yml").read_text()
     assert "workflow_dispatch:" in workflow and "contents: read" in workflow
     assert "persist-credentials: false" in workflow and "retention-days: 7" in workflow

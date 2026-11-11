@@ -1,8 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
-from sqlalchemy import func, select
-
 from alignn.db import SessionLocal, utcnow
 from alignn.domains.opportunities.import_scraped import import_bundle
 from alignn.domains.opportunities.ingestion_models import ImportReceipt
@@ -10,6 +8,7 @@ from alignn.domains.opportunities.models import Opportunity
 from alignn.domains.opportunities.visibility import expire_opportunities
 from alignn_scraper.bundle import write_bundle
 from alignn_scraper.models import Observation, SourceResult
+from sqlalchemy import func, select
 
 
 def bundle():

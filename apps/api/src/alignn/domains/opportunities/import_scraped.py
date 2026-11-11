@@ -6,14 +6,14 @@ from datetime import timedelta
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
+from alignn_scraper.bundle import digest, json_bytes, read_bundle
+from alignn_scraper.models import SourceResult
 from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert
 
 from alignn.db import SessionLocal, utcnow
 from alignn.domains.organizations.models import Organization
 from alignn.domains.profiles.models import Skill
-from alignn_scraper.bundle import digest, json_bytes, read_bundle
-from alignn_scraper.models import SourceResult
 
 from .ingestion import inferred_skills
 from .ingestion_models import ImportReceipt

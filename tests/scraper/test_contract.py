@@ -20,9 +20,7 @@ def event_ld(country="IN"):
         "startDate": (NOW + timedelta(days=5)).isoformat(),
         "endDate": (NOW + timedelta(days=6)).isoformat(),
         "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
-        "location": {
-            "address": {"addressCountry": country, "addressLocality": "Noida"}
-        },
+        "location": {"address": {"addressCountry": country, "addressLocality": "Noida"}},
         "eventStatus": "https://schema.org/EventScheduled",
         "organizer": {
             "@type": "Person",
@@ -37,18 +35,12 @@ def html(ld, state=None):
         '<script type="application/ld+json">'
         + json.dumps(ld)
         + "</script>"
-        + (
-            '<script id="__NEXT_DATA__">' + json.dumps(state) + "</script>"
-            if state
-            else ""
-        )
+        + ('<script id="__NEXT_DATA__">' + json.dumps(state) + "</script>" if state else "")
     )
 
 
 def row():
-    return parse_hackindia(
-        html(event_ld()), "https://hackindia.org/2026/test-hackathon", NOW
-    )
+    return parse_hackindia(html(event_ld()), "https://hackindia.org/2026/test-hackathon", NOW)
 
 
 def test_hackindia_india_dates_and_no_person_fields():
@@ -56,8 +48,7 @@ def test_hackindia_india_dates_and_no_person_fields():
     assert value.country_code == "IN" and value.registration_closes_at is None
     assert value.ends_at > value.starts_at
     assert (
-        "private@" not in value.model_dump_json()
-        and "Do not copy" not in value.model_dump_json()
+        "private@" not in value.model_dump_json() and "Do not copy" not in value.model_dump_json()
     )
     assert parse_hackindia(html(event_ld("US")), value.source_url, NOW) is None
 
@@ -79,14 +70,9 @@ def test_luma_uses_public_event_and_technical_scope():
     }
     value = parse_luma(html(ld, state), ld["url"], NOW)
     assert value.source_id == "evt-123"
-    assert (
-        parse_luma(html({**ld, "name": "Weekend Football"}, state), ld["url"], NOW)
-        is None
-    )
+    assert parse_luma(html({**ld, "name": "Weekend Football"}, state), ld["url"], NOW) is None
     cancelled = {**ld, "eventStatus": "https://schema.org/EventCancelled"}
-    assert (
-        parse_luma(html(cancelled, state), ld["url"], NOW).source_state == "CANCELLED"
-    )
+    assert parse_luma(html(cancelled, state), ld["url"], NOW).source_state == "CANCELLED"
 
 
 def test_contract_rejects_naive_future_or_unsafe_urls():
@@ -114,14 +100,10 @@ def test_contract_rejects_naive_future_or_unsafe_urls():
 
 def test_bundle_roundtrip_chunking_and_tamper():
     values = [
-        row().model_copy(
-            update={"source_id": f"event-{i}", "description": "字" * 19000}
-        )
+        row().model_copy(update={"source_id": f"event-{i}", "description": "字" * 19000})
         for i in range(30)
     ]
-    result = SourceResult(
-        source="hackindia", status="ok", checked_at=NOW, records=values
-    )
+    result = SourceResult(source="hackindia", status="ok", checked_at=NOW, records=values)
     packed = write_bundle([result], NOW)
     manifest, parts = read_bundle(packed, NOW)
     assert len(manifest["chunks"]) > 1 and len(parts["hackindia"]["records"]) == 30
@@ -131,9 +113,7 @@ def test_bundle_roundtrip_chunking_and_tamper():
         zipfile.ZipFile(stream, "w") as dest,
     ):
         for name in source.namelist():
-            dest.writestr(
-                name, source.read(name) + (b" " if name != "manifest.json" else b"")
-            )
+            dest.writestr(name, source.read(name) + (b" " if name != "manifest.json" else b""))
     with pytest.raises(ValueError):
         read_bundle(stream.getvalue(), NOW)
     with pytest.raises(ValueError):
@@ -168,9 +148,7 @@ def test_devfolio_missing_country_is_skipped_and_dates_are_distinct():
     def document(value):
         return html({}, {"props": {"pageProps": {"hackathon": value}}})
 
-    assert (
-        parse_devfolio(document(raw), "https://student-build.devfolio.co/", NOW) is None
-    )
+    assert parse_devfolio(document(raw), "https://student-build.devfolio.co/", NOW) is None
     value = parse_devfolio(
         document({**raw, "country": "India"}), "https://student-build.devfolio.co/", NOW
     )
@@ -189,15 +167,10 @@ def test_greenhouse_intern_boundary_and_unknown_location():
     }
     assert parse_greenhouse(raw, "stripe", NOW).work_mode == "UNKNOWN"
     assert parse_greenhouse({**raw, "title": "Internal Manager"}, "stripe", NOW) is None
-    assert (
-        parse_greenhouse({**raw, "location": {"name": "Remote"}}, "stripe", NOW) is None
-    )
+    assert parse_greenhouse({**raw, "location": {"name": "Remote"}}, "stripe", NOW) is None
 
 
 def test_known_external_country_does_not_become_indian_by_timezone():
     ld = event_ld("US")
     ld["timezone"] = "Asia/Kolkata"
-    assert (
-        parse_hackindia(html(ld), "https://hackindia.org/2026/test-hackathon", NOW)
-        is None
-    )
+    assert parse_hackindia(html(ld), "https://hackindia.org/2026/test-hackathon", NOW) is None

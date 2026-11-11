@@ -1,13 +1,12 @@
 from datetime import timedelta
 from uuid import uuid4
 
-from sqlalchemy import select
-
 from alignn.db import SessionLocal, utcnow
 from alignn.domains.opportunities.models import Opportunity, SavedOpportunity
 from alignn.domains.opportunities.schemas import SearchQuery
 from alignn.domains.opportunities.service import search_opportunities
 from alignn.domains.organizations.models import Organization
+from sqlalchemy import select
 
 
 def add_opportunity(db, **kwargs):
@@ -62,7 +61,6 @@ def test_retirement_and_expiry_preserve_saved_history(make_user):
 
 def test_remotive_jobs_never_fetch_and_are_not_scheduled(monkeypatch):
     import httpx
-
     from alignn.domains.opportunities.ingestion import schedule_ingestion, sync_remotive
     from alignn.jobs.handlers import dispatch
     from alignn.jobs.models import Job
@@ -231,3 +229,157 @@ def test_recheck_404_needs_spacing_and_new_evidence_wins():
         assert other.status == "PUBLISHED"
         apply_check(db, other.id, now, now, status=429, error="rate_limited")
         assert other.status == "PUBLISHED" and other.source_error == "rate_limited"
+
+
+def test_scheduler_registers_models_in_a_clean_process():
+    import os
+    import subprocess
+    import sys
+
+    with SessionLocal.begin() as db:
+        add_opportunity(db, ends_at=utcnow() - timedelta(days=1))
+    result = subprocess.run(
+        [sys.executable, "-c", "from alignn.jobs.scheduler import tick; tick()"],
+        env={
+            **os.environ,
+            "SCRAPER_SYNC_ENABLED": "true",
+            "SCRAPER_AUTH_MODE": "cli",
+            "SCRAPER_REPOSITORY_ID": "1",
+            "SCRAPER_WORKFLOW_ID": "2",
+        },
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr[-1200:]
+
+
+def test_incomplete_ats_recheck_never_closes_another_listing(monkeypatch):
+    import json
+    import time
+
+    from alignn.domains.opportunities import recheck
+
+    with SessionLocal.begin() as db:
+        for identity in ["1", "2"]:
+            row = add_opportunity(db)
+            row.source_name = "Greenhouse:stripe"
+            row.source_id = identity
+            row.source_url = f"https://stripe.com/jobs/search?gh_jid={identity}"
+
+    class HTTP:
+        def __init__(self, source):
+            self.started = time.monotonic()
+
+        def close(self):
+            pass
+
+        def get(self, url):
+            return json.dumps({"jobs": [], "meta": {"total": 1}})
+
+    monkeypatch.setattr(recheck, "PublicHTTP", HTTP)
+    recheck.recheck_source("greenhouse-stripe")
+    with SessionLocal() as db:
+        assert all(row.status == "PUBLISHED" for row in db.scalars(select(Opportunity)))
+
+
+def test_closed_saved_history_and_detail_are_readable_only_by_owner(make_user, api_client):
+    owner = make_user()
+    stranger = make_user()
+    with SessionLocal.begin() as db:
+        row = add_opportunity(db)
+        row.status = "CLOSED"
+        identity = row.id
+        db.add(SavedOpportunity(user_id=owner.id, opportunity_id=identity))
+    client = api_client(owner)
+    saved = client.get("/api/v1/me/saved")
+    assert saved.status_code == 200 and saved.json()["items"][0]["id"] == str(identity)
+    assert client.get(f"/api/v1/opportunities/{identity}").status_code == 200
+    assert api_client(stranger).get(f"/api/v1/opportunities/{identity}").status_code in {403, 404}
+    assert client.get("/api/v1/opportunities").json()["items"] == []
+
+
+def test_github_poll_failure_backs_off_new_poll_jobs(monkeypatch):
+    from types import SimpleNamespace
+
+    from alignn.domains.opportunities import github_sync
+
+    calls = []
+
+    def fail(settings):
+        calls.append(1)
+        raise ValueError("github_access_failed")
+
+    monkeypatch.setattr(github_sync, "reader_from_settings", fail)
+    settings = SimpleNamespace(scraper_sync_enabled=True)
+    try:
+        github_sync.poll(settings)
+    except ValueError:
+        pass
+    assert github_sync.poll(settings) == 0
+    assert len(calls) == 1
+
+
+def test_scraper_receipts_and_terminal_jobs_have_bounded_retention():
+    from alignn.domains.opportunities.import_scraped import ensure_receipt
+    from alignn.jobs.models import Job
+    from alignn.jobs.scheduler import prune_scraper_metadata
+
+    now = utcnow()
+    with SessionLocal.begin() as db:
+        old = ensure_receipt(db, {"local_artifact": "old"}, "hackindia", "a" * 64)
+        old.state = "APPLIED"
+        old.created_at = now - timedelta(days=31)
+        recent = ensure_receipt(db, {"local_artifact": "recent"}, "hackindia", "b" * 64)
+        recent.state = "APPLIED"
+        recent.created_at = now - timedelta(days=29)
+        db.add(
+            Job(
+                kind="poll_scraper",
+                key="old-terminal",
+                payload={},
+                status="DONE",
+                run_at=now - timedelta(days=8),
+                created_at=now - timedelta(days=8),
+            )
+        )
+        db.flush()
+        assert prune_scraper_metadata(db, now) == 2
+        assert db.get(type(recent), recent.id) is not None
+
+
+def test_artifact_failure_has_a_visible_terminal_receipt(monkeypatch):
+    from types import SimpleNamespace
+
+    import pytest
+    from alignn.domains.opportunities import github_sync
+    from alignn.domains.opportunities.ingestion_models import ImportReceipt
+    from alignn.jobs.models import Job
+
+    identity = dict(repository_id=1, workflow_id=2, run_id=3, run_attempt=1, artifact_id=4)
+    with SessionLocal.begin() as db:
+        db.add(
+            Job(
+                kind="import_scraper",
+                key="scraper-3-1-4",
+                payload={},
+                status="RUNNING",
+                attempts=5,
+                run_at=utcnow(),
+            )
+        )
+
+    class Reader:
+        def get(self, path):
+            raise ValueError("github_access_failed")
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(github_sync, "reader_from_settings", lambda settings: Reader())
+    with pytest.raises(ValueError):
+        github_sync.import_artifact(
+            SimpleNamespace(), {"identity": identity, "digest": "sha256:" + "a" * 64}
+        )
+    with SessionLocal() as db:
+        receipt = db.scalar(select(ImportReceipt))
+        assert receipt and receipt.state == "FAILED" and receipt.error == "artifact_delivery_failed"

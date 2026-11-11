@@ -191,6 +191,10 @@ def run_once(adapters: Adapters, *, worker_id: str, lane: str = "all") -> int:
 def main():
     import argparse
 
+    from alignn.model_registry import load_models
+
+    load_models()
+
     parser = argparse.ArgumentParser(description="Alignn background worker")
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--lane", choices=["all", "maintenance", "collection"], default="all")

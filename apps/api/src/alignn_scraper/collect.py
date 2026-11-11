@@ -87,7 +87,7 @@ def collect(source):
                         records.append(value)
                     else:
                         skipped += 1
-                except (ValueError, KeyError, TypeError) as e:
+                except (ValueError, KeyError, TypeError, AttributeError) as e:
                     failed += 1
                     errors.add(e.code if isinstance(e, FetchError) else "detail_validation_failed")
                     if isinstance(e, FetchError) and (
@@ -104,8 +104,8 @@ def collect(source):
                 raise ValueError("duplicate_source_identity")
             by_id[row.source_id] = row
         records = list(by_id.values())
-        status = "partial" if errors else "ok" if records else "empty"
-    except (ValueError, KeyError, TypeError) as e:
+        status = ("partial" if records else "failed") if errors else "ok" if records else "empty"
+    except (ValueError, KeyError, TypeError, AttributeError) as e:
         errors.add(e.code if isinstance(e, FetchError) else "source_validation_failed")
         status = "partial" if records else "failed"
         failed += 1

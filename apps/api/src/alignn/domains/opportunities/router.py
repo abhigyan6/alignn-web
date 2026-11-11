@@ -198,7 +198,7 @@ def saved(request: Request):
         .join(SavedOpportunity)
         .where(
             SavedOpportunity.user_id == actor.user_id,
-            Opportunity.status == "PUBLISHED",
+            Opportunity.status.in_(["PUBLISHED", "CLOSED"]),
             Opportunity.mode == "EXTERNAL",
         )
         .order_by(Opportunity.registration_closes_at)

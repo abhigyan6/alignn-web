@@ -27,6 +27,23 @@ def visible(db, actor, id):
     if o.status != "PUBLISHED":
         if actor is None:
             raise DomainError("not_found", "Opportunity not found.", 404)
+        if o.status == "CLOSED":
+            from alignn.domains.applications.models import Application
+
+            from .models import SavedOpportunity
+
+            owned_save = db.scalar(
+                select(SavedOpportunity.id).where(
+                    SavedOpportunity.user_id == actor.user_id, SavedOpportunity.opportunity_id == id
+                )
+            )
+            owned_application = db.scalar(
+                select(Application.id).where(
+                    Application.user_id == actor.user_id, Application.opportunity_id == id
+                )
+            )
+            if owned_save or owned_application:
+                return o
         require_membership(db, actor, o.organization_id, "manage")
     return o
 

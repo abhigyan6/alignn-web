@@ -22,15 +22,13 @@ def export(output):
         Path("src/alignn_scraper") / p.name: p
         for p in (ROOT / "apps/api/src/alignn_scraper").glob("*.py")
     }
-    for name in ("test_contract.py", "test_transport.py"):
+    for name in ("test_contract.py", "test_transport.py", "test_review_regressions.py"):
         files[Path("tests") / name] = ROOT / "tests/scraper" / name
     template = ROOT / "scripts/scraper-template"
     for p in template.rglob("*"):
         if p.is_file():
             files[p.relative_to(template)] = p
-    previous = (
-        json.loads(marker.read_text()).get("files", []) if marker.exists() else []
-    )
+    previous = json.loads(marker.read_text()).get("files", []) if marker.exists() else []
     for name in previous:
         path = Path(name)
         if path.is_absolute() or ".." in path.parts or ".git" in path.parts:
@@ -41,9 +39,7 @@ def export(output):
         target = output / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
-    sha = subprocess.check_output(
-        ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
-    ).strip()
+    sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     dirty = bool(
         subprocess.check_output(
             [
@@ -72,9 +68,7 @@ def export(output):
         )
         + "\n"
     )
-    print(
-        json.dumps({"exported_files": len(files), "origin_commit": sha, "dirty": dirty})
-    )
+    print(json.dumps({"exported_files": len(files), "origin_commit": sha, "dirty": dirty}))
 
 
 if __name__ == "__main__":
