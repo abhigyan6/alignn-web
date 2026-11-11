@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { opportunityDate, sourceLabel } from "@/components/opportunity-card";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, Opportunity } from "@/lib/api";
@@ -15,9 +16,21 @@ export default function Detail() {
     factors: Record<string, number>;
   } | null>(null);
   useEffect(() => {
-    api<Opportunity>("/opportunities/" + id)
-      .then(setO)
-      .catch((e) => setError(e.message));
+    window.scrollTo(0, 0);
+    const controller = new AbortController();
+    setO(null);
+    setError("");
+    setFit(null);
+    setMessage("");
+    setTracked(false);
+    api<Opportunity>("/opportunities/" + id, { signal: controller.signal })
+      .then((data) => {
+        if (!controller.signal.aborted) setO(data);
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted) setError(e.message);
+      });
+    return () => controller.abort();
   }, [id]);
   async function action(path: string, body?: object) {
     setBusy(true);
@@ -46,10 +59,18 @@ export default function Detail() {
       {error ? (
         <p role="alert">{error}</p>
       ) : !o ? (
-        <p role="status">Loading opportunity…</p>
+        <div className="detail-placeholder" role="status" aria-busy="true">
+          <span className="sr-only">Loading opportunity…</span>
+          <span className="skeleton skeleton-heading" aria-hidden="true" />
+          <span className="skeleton skeleton-line" aria-hidden="true" />
+          <span className="skeleton skeleton-field" aria-hidden="true" />
+        </div>
       ) : (
         <>
-          <div className={"detail-poster " + o.kind.toLowerCase()}>
+          <div className="detail-poster">
+            <span className={"category-chip " + o.kind.toLowerCase()}>
+              {o.kind.toLowerCase()}
+            </span>
             <p>{o.organization_name}</p>
             <h1>{o.title}</h1>
             <p>
@@ -57,8 +78,61 @@ export default function Detail() {
             </p>
           </div>
           <div className="detail-grid">
-            <article>
-              <h2>Make your next move.</h2>
+            <aside className="action-panel">
+              <p>Apply on the organizer’s website</p>
+              <h2>Your next step</h2>
+              <p>Applications close</p>
+              {o.registration_closes_at ? (
+                <time dateTime={o.registration_closes_at}>
+                  {opportunityDate(o.registration_closes_at, true)} · IST
+                </time>
+              ) : (
+                <p>No deadline supplied. Check the source for availability.</p>
+              )}
+              {o.source_name && (
+                <p>
+                  Source:{" "}
+                  <a
+                    href={o.source_url ?? o.apply_url ?? "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {sourceLabel(o.source_name)}
+                  </a>
+                  . Listings may change; confirm details at the source.
+                </p>
+              )}
+              <a
+                className="button"
+                href={o.apply_url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Apply externally ↗
+              </a>
+              <button
+                disabled={busy}
+                onClick={() =>
+                  action("/applications", { opportunity_id: o.id })
+                }
+              >
+                Track this application
+              </button>
+              <button
+                disabled={busy}
+                onClick={() => action("/opportunities/" + id + "/save")}
+              >
+                Save opportunity
+              </button>
+              <p role="status">{message}</p>
+              {tracked && (
+                <Link href="/workspace#applications">
+                  Open application tracker ↗
+                </Link>
+              )}
+            </aside>
+            <article id="opportunity-description">
+              <h2>About this opportunity</h2>
               <p className="description">{o.description}</p>
               <h2>Skills and interests</h2>
               <p>
@@ -103,8 +177,8 @@ export default function Detail() {
               {o.source_name ? (
                 <p>
                   Eligibility has not been structured for this external listing.
-                  Check the full requirements on {o.source_name} before
-                  applying.
+                  Check the full requirements on {sourceLabel(o.source_name)}{" "}
+                  before applying.
                 </p>
               ) : (
                 <>
@@ -164,62 +238,6 @@ export default function Detail() {
                 </>
               )}
             </article>
-            <aside className="action-panel">
-              <p>Apply on the organizer’s website</p>
-              <h2>Your next step</h2>
-              <p>Applications close</p>
-              {o.registration_closes_at ? (
-                <time dateTime={o.registration_closes_at}>
-                  {new Date(o.registration_closes_at).toLocaleString("en-GB", {
-                    timeZone: "UTC",
-                  })}{" "}
-                  UTC
-                </time>
-              ) : (
-                <p>No deadline supplied. Check the source for availability.</p>
-              )}
-              {o.source_name && (
-                <p>
-                  Source:{" "}
-                  <a
-                    href={o.source_url ?? o.apply_url ?? "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {o.source_name}
-                  </a>
-                  . Listings may change; confirm details at the source.
-                </p>
-              )}
-              <a
-                className="button"
-                href={o.apply_url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Apply externally ↗
-              </a>
-              <button
-                disabled={busy}
-                onClick={() =>
-                  action("/applications", { opportunity_id: o.id })
-                }
-              >
-                Track this application
-              </button>
-              <button
-                disabled={busy}
-                onClick={() => action("/opportunities/" + id + "/save")}
-              >
-                Save opportunity
-              </button>
-              <p role="status">{message}</p>
-              {tracked && (
-                <Link href="/workspace#applications">
-                  Open application tracker ↗
-                </Link>
-              )}
-            </aside>
           </div>
         </>
       )}

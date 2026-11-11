@@ -52,3 +52,22 @@ Start PostgreSQL from the new directory after a reboot:
 ```
 
 Run scanner and mail commands in separate terminals. These are local development services, not production hosting. The original database was cleanly stopped before copying; never run both clusters on the same port.
+
+## Working without Docker or LocalStack (11 November checkpoint)
+
+The existing native services are sufficient for current development: project PostgreSQL on 55432, FastAPI on 8000, Next.js on localhost:3000, ClamAV on 3310 and Mailpit SMTP on 1025. Keep the existing ignored runtime configuration; do not replace it with example credentials. Private development uploads use the existing local object adapter. No LocalStack, Colima, Kubernetes or additional monitoring service is required for this workflow.
+
+Run the read-only check from the active repository:
+
+```sh
+python3 scripts/local-status.py
+```
+
+The script checks HTTP availability/readiness and TCP ports, not private data or credentials. A passing port check does not verify malware definitions or successful email delivery. The worker and scheduler need their own terminals:
+
+```sh
+PYTHONPATH=apps/api/src apps/api/.venv/bin/python -m alignn.jobs.worker
+PYTHONPATH=apps/api/src apps/api/.venv/bin/python -m alignn.jobs.scheduler
+```
+
+Use one local worker and scheduler initially; avoid starting duplicates. These use the existing PostgreSQL queue and six-hour source schedule, not new infrastructure. The resumed local run recorded completed Devfolio, Greenhouse and Remotive ingestion jobs. This is local evidence only. Heroku/S3/AWS production state was not inspected or changed by this repair pass.

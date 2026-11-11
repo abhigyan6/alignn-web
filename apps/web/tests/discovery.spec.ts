@@ -92,7 +92,7 @@ for (const width of [360, 390, 768, 1440]) {
     await page.goto("/explore");
     const card = page.locator(".event").first();
     await expect(card).toBeVisible();
-    for (const selector of [".poster strong", "h3"]) {
+    for (const selector of [".opportunity-company", "h3"]) {
       const dimensions = await card.locator(selector).evaluate((element) => {
         const text = element.getBoundingClientRect();
         const card = element.closest(".event")!.getBoundingClientRect();
@@ -141,4 +141,36 @@ test("changing category restarts an exhausted match-ranking check", async ({
   const afterCategory = requests;
   await page.clock.runFor(5100);
   await expect.poll(() => requests).toBeGreaterThan(afterCategory);
+});
+
+test("real internship opens consistent details with an external application link", async ({
+  page,
+}) => {
+  await page.goto("/explore");
+  await page.getByRole("button", { name: "Internships", exact: true }).click();
+  const card = page.locator(".opportunity-card").first();
+  await expect(card).toBeVisible();
+  const title = await card.locator("h3").innerText();
+  await page.screenshot({
+    path: `/tmp/alignn-discovery-current-${test.info().project.name}.png`,
+    fullPage: true,
+  });
+  await card.click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  const apply = page.getByRole("link", { name: "Apply externally" });
+  await expect(apply).toHaveAttribute("href", /^https:\/\//);
+  await expect(apply).toHaveAttribute("target", "_blank");
+  await expect(
+    page.getByRole("heading", { name: "About this opportunity" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: `/tmp/alignn-detail-current-${test.info().project.name}.png`,
+    fullPage: false,
+  });
 });

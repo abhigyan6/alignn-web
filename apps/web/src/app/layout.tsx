@@ -5,7 +5,7 @@ import "./globals.css";
 import AppNavigation from "@/components/app-navigation";
 import SiteIntro, { introScript } from "@/components/site-intro";
 export const metadata: Metadata = {
-  title: "Alignn · Coming soon",
+  title: "Alignn · Find your next opportunity",
   description: "Alignn is building a clearer path to your next opportunity.",
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -33,7 +33,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {configured ? <SessionBridge>{children}</SessionBridge> : children}
       <footer className="site-footer">
         <strong>Find your people. Find your next step.</strong>
-        <span>Alignn · Coming soon.</span>
+        <span>Discover. Save. Take your next step.</span>
       </footer>
     </>
   );

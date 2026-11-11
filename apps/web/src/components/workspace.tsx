@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import OpportunityCard from "@/components/opportunity-card";
 import { useClerk } from "@clerk/nextjs";
 import AccountLoading from "@/components/account-loading";
 import { useEffect, useState } from "react";
@@ -34,7 +35,15 @@ export default function Workspace() {
   if (loading) return <AccountLoading />;
   return (
     <main id="main" className="workspace">
-      <h1>Your workspace</h1>
+      <div className="workspace-heading">
+        <div>
+          <p className="eyebrow">From possibility to progress</p>
+          <h1>Your workspace</h1>
+        </div>
+        <Link className="button secondary" href="/explore">
+          Discover opportunities ↗
+        </Link>
+      </div>
       {error ? (
         <div className="empty">
           <h2>Sign in to continue.</h2>
@@ -48,23 +57,18 @@ export default function Workspace() {
           <p>{user?.full_name}, keep the opportunities that matter close.</p>
           {!user?.is_verified && (
             <p role="status">
-              Verify your email before requesting an organization.
+              Verify your email to keep your account ready for your next step.
             </p>
           )}
           <Link href="/onboarding?edit=1">Edit your profile ↗</Link>
           <section>
             <h2>Saved opportunities</h2>
             {items.length ? (
-              items.map((o) => (
-                <Link
-                  className="saved-row"
-                  key={o.id}
-                  href={"/opportunities/" + o.id}
-                >
-                  <strong>{o.title}</strong>
-                  <span>{o.organization_name} ↗</span>
-                </Link>
-              ))
+              <div className="event-grid">
+                {items.map((o) => (
+                  <OpportunityCard key={o.id} opportunity={o} />
+                ))}
+              </div>
             ) : (
               <div className="empty">
                 <h3>A shortlist starts with one possibility.</h3>

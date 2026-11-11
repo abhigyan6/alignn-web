@@ -1,4 +1,5 @@
 "use client";
+import OpportunityCard from "@/components/opportunity-card";
 import OpportunitySkeleton from "@/components/opportunity-skeleton";
 import Link from "next/link";
 import { useEffect, useState, FormEvent } from "react";
@@ -76,9 +77,10 @@ export default function Explore() {
     setSearch(query);
   }
   return (
-    <main id="main">
+    <main id="main" className="discovery-page">
       <section className="hero">
         <div>
+          <p className="eyebrow">Discover your next move</p>
           <h1>
             Find your people.
             <br />
@@ -102,15 +104,40 @@ export default function Explore() {
             <button className="button">Find opportunities</button>
           </form>
         </div>
-        <div className="loop-art" aria-hidden="true">
-          <i />
-          <i />
-          <span>
-            Good things
-            <br />
-            happen together.
+        <aside
+          className="discovery-guide"
+          aria-label="Your opportunity journey"
+        >
+          <span className="guide-label">
+            A little direction. A lot of possibility.
           </span>
-        </div>
+          <ol>
+            <li>
+              <span>01</span>
+              <div>
+                <strong>Find your fit</strong>
+                <p>Explore roles and challenges around your interests.</p>
+              </div>
+            </li>
+            <li>
+              <span>02</span>
+              <div>
+                <strong>Keep a shortlist</strong>
+                <p>Save the opportunities you want to come back to.</p>
+              </div>
+            </li>
+            <li>
+              <span>03</span>
+              <div>
+                <strong>Make your move</strong>
+                <p>Apply at the source and track your next steps.</p>
+              </div>
+            </li>
+          </ol>
+          <Link href="/workspace">
+            Go to your workspace <span aria-hidden="true">↗</span>
+          </Link>
+        </aside>
       </section>
       <div className="category-bar" aria-label="Opportunity categories">
         {categories.map(([value, label]) => (
@@ -128,20 +155,24 @@ export default function Explore() {
       </div>
       <section className="marketplace">
         <aside className="editorial">
+          <p className="eyebrow">Your advantage</p>
           <h2>
-            A little direction.
-            <br />A lot of possibility.
+            More relevant.
+            <br />
+            Less searching.
           </h2>
           <p>
-            Explore by what interests you. Save the ones that matter, then keep
-            your next steps in one place.
+            Your education, interests and confirmed skills help shape your
+            matches.
           </p>
-          <Link href="/workspace">Open your workspace ↗</Link>
+          <Link className="button secondary" href="/onboarding?edit=1">
+            Update your profile ↗
+          </Link>
           <div className="tip">
-            <h3>Fit is a starting point.</h3>
+            <h3>Know before you apply</h3>
             <p>
-              Match scores explain profile overlap. Eligibility is checked
-              separately against the published requirements.
+              Profile overlap is a starting point. Check eligibility, dates and
+              availability on the original listing.
             </p>
           </div>
         </aside>
@@ -153,7 +184,9 @@ export default function Explore() {
                   ? "Results for “" + search + "”"
                   : "Your next opportunity"}
               </h2>
-              <p>Published opportunities from the Alignn catalog.</p>
+              <p>
+                Explore external opportunities. Keep your next step in view.
+              </p>
             </div>
             <label>
               Sort by
@@ -207,46 +240,7 @@ export default function Explore() {
           ) : items.length ? (
             <div className="event-grid">
               {items.map((o) => (
-                <Link
-                  className="event"
-                  href={"/opportunities/" + o.id}
-                  key={o.id}
-                >
-                  <div className={"poster " + o.kind.toLowerCase()}>
-                    <span>{o.organization_name}</span>
-                    <strong>{o.title}</strong>
-                    <small>{o.kind.replaceAll("_", " ").toLowerCase()}</small>
-                  </div>
-                  <div className="event-body">
-                    <span className="mode">Apply externally</span>
-                    <h3>{o.title}</h3>
-                    <p>
-                      {o.location} ·{" "}
-                      {o.work_mode === "UNKNOWN"
-                        ? "work mode not specified"
-                        : o.work_mode.toLowerCase()}
-                    </p>
-                    <div className="event-bottom">
-                      {o.registration_closes_at ? (
-                        <time dateTime={o.registration_closes_at}>
-                          Closes{" "}
-                          {new Date(
-                            o.registration_closes_at,
-                          ).toLocaleDateString("en-GB", {
-                            day: "numeric",
-                            month: "short",
-                            timeZone: "UTC",
-                          })}{" "}
-                          · UTC
-                        </time>
-                      ) : (
-                        <span>Deadline not provided</span>
-                      )}
-                      <span>View ↗</span>
-                    </div>
-                    {o.source_name && <small>Source: {o.source_name}</small>}
-                  </div>
-                </Link>
+                <OpportunityCard key={o.id} opportunity={o} />
               ))}
             </div>
           ) : (
@@ -264,6 +258,7 @@ export default function Explore() {
               {(search || kind) && (
                 <button
                   onClick={() => {
+                    setCursor(0);
                     setKind("");
                     setSearch("");
                     setQuery("");

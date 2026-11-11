@@ -27,3 +27,12 @@ Discovery was inspected at 360, 390, 768 and 1440px using explicit synthetic bro
 - Application pages show Discover and My workspace links with active-page semantics. The public coming-soon homepage stays focused on its existing content.
 
 Verified in the November 11 loading pass: production build and formatting, 22 desktop/mobile browser checks for loading, reduced motion, sign-in guards and title wrapping, and separate delayed-results screenshot checks. Native Edge inspection confirmed the application navigation. These checks do not establish full signed-in onboarding acceptance.
+
+## Shared opportunity surfaces (11 November repair)
+
+- One `OpportunityCard` is shared by discovery and saved opportunities: source category, organizer/employer, a single wrapping title, location/work mode, up to three explicitly labeled inferred/listed skills and source/deadline footer. No generated poster repeats the title.
+- Panels/cards use 16px radii, 20px card insets and 16px grid gaps. Discovery category controls are 44px pill buttons with pressed semantics. Existing Manrope and semantic green tokens remain authoritative.
+- Source dates use Asia/Kolkata with an explicit IST label. The detail action preserves the published time; unknown deadlines and work modes remain unknown.
+- Desktop detail content and actions use two columns. On narrow screens actions precede long descriptions in both DOM and visual order. Source application remains an external link; saving/tracking remain separate actions.
+- Workspace and discovery share cards. Details use the same bordered white surfaces. Loading cards follow the shorter card structure. Mobile discovery hides the optional guide and explanatory sidebar.
+- The public homepage retains its coming-soon title. Application routes inherit the product title rather than advertising the whole application as coming soon.

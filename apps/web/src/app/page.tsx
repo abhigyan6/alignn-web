@@ -1,3 +1,4 @@
+export const metadata = { title: "Alignn · Coming soon" };
 export default function Home() {
   return (
     <main id="main" className="coming-soon-page">
