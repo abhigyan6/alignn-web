@@ -96,6 +96,23 @@ def ingest_remotive(payload, adapters, key):
     sync_remotive()
 
 
+def ingest_devfolio(payload, adapters, key):
+    from alignn.domains.opportunities.devfolio import sync_devfolio
+
+    sync_devfolio()
+
+
+def ingest_greenhouse(payload, adapters, key):
+    from alignn.domains.opportunities.greenhouse import BOARDS, sync_board
+
+    board = payload.get("board")
+    if board not in BOARDS:
+        raise PermanentDeliveryError("unsupported_board")
+    sync_board(board)
+
+
+HANDLERS["ingest_greenhouse"] = ingest_greenhouse
+HANDLERS["ingest_devfolio"] = ingest_devfolio
 HANDLERS["ingest_remotive"] = ingest_remotive
 
 

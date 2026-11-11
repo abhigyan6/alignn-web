@@ -362,7 +362,8 @@
             "enum": [
               "REMOTE",
               "HYBRID",
-              "ONSITE"
+              "ONSITE",
+              "UNKNOWN"
             ],
             "title": "Work Mode",
             "type": "string"
@@ -579,7 +580,8 @@
             "enum": [
               "REMOTE",
               "HYBRID",
-              "ONSITE"
+              "ONSITE",
+              "UNKNOWN"
             ],
             "title": "Work Mode",
             "type": "string"

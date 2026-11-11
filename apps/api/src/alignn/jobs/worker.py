@@ -3,6 +3,7 @@ import random
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from threading import Event, Thread
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, or_, select, update
@@ -123,6 +124,20 @@ def fail_lease(db: Session, lease: JobLease, *, code: str, permanent: bool, now:
     )
 
 
+def renew_lease(lease: JobLease, clock: Clock, stop: Event) -> None:
+    """Renew long-running ingestion jobs using a separate, short transaction."""
+    interval = 20
+    while not stop.wait(interval):
+        try:
+            with SessionLocal.begin() as db:
+                if not heartbeat(db, lease, clock.now()):
+                    return
+                interval = 20
+        except Exception:
+            logger.warning("Job heartbeat failed", extra={"job_id": str(lease.id)})
+            interval = 5
+
+
 def process_lease(lease: JobLease, adapters: Adapters, clock: Clock) -> None:
     with SessionLocal.begin() as db:
         if not heartbeat(db, lease, clock.now()):
@@ -132,6 +147,9 @@ def process_lease(lease: JobLease, adapters: Adapters, clock: Clock) -> None:
             job.status = "SKIPPED"
             job.payload = {}
             return
+    stop = Event()
+    renewal = Thread(target=renew_lease, args=(lease, clock, stop), daemon=True)
+    renewal.start()
     try:
         dispatch(lease.kind, lease.payload, adapters, lease.key)
     except PermanentDeliveryError as exc:
@@ -145,6 +163,9 @@ def process_lease(lease: JobLease, adapters: Adapters, clock: Clock) -> None:
     else:
         with SessionLocal.begin() as db:
             complete_lease(db, lease)
+    finally:
+        stop.set()
+        renewal.join(timeout=1)
 
 
 def run_once(adapters: Adapters, *, worker_id: str) -> int:

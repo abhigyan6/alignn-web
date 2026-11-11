@@ -16,7 +16,7 @@ class OpportunityCreate(StrictModel):
     mode: Literal["EXTERNAL"] = "EXTERNAL"
     apply_url: str = Field(max_length=1000)
     location: str = Field("Remote", max_length=160)
-    work_mode: Literal["REMOTE", "HYBRID", "ONSITE"] = "REMOTE"
+    work_mode: Literal["REMOTE", "HYBRID", "ONSITE", "UNKNOWN"] = "REMOTE"
     registration_closes_at: datetime | None = None
     starts_at: datetime | None = None
     ends_at: datetime | None = None

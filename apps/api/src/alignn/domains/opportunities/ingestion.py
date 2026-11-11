@@ -41,6 +41,29 @@ class PlainText(HTMLParser):
             self.parts.append(data)
 
 
+def inferred_skills(catalog, values):
+    """Source keywords are preferences, never verified eligibility requirements."""
+    content = (values["title"] + " " + values["description"]).lower()
+    return [
+        skill.key
+        for skill in catalog
+        if any(
+            re.search(r"(?<!\w)" + re.escape(alias.lower()) + r"(?!\w)", content)
+            for alias in [skill.name, *skill.aliases]
+        )
+    ]
+
+
+def source_is_fresh(db, source, now):
+    latest = db.scalar(
+        select(Opportunity.source_checked_at)
+        .where(Opportunity.source_name == source)
+        .order_by(Opportunity.source_checked_at.desc())
+        .limit(1)
+    )
+    return latest is not None and now - latest < timedelta(hours=6)
+
+
 def normalize(row):
     source_id = str(row["id"])
     if not source_id.isdigit() or len(source_id) > 180:
@@ -132,6 +155,7 @@ def sync_remotive(client=None):
         catalog = db.scalars(select(Skill)).all()
         seen = set()
         for values in rows:
+            values["preferred_skills"] = inferred_skills(catalog, values)
             source_id = values["source_id"]
             seen.add(source_id)
             row = db.scalar(
@@ -149,16 +173,6 @@ def sync_remotive(client=None):
                 for key, value in values.items():
                     setattr(row, key, value)
                 row.version += 1
-            # Inferred skills are preferred, never invented eligibility requirements.
-            content = (values["title"] + " " + values["description"]).lower()
-            row.preferred_skills = [
-                skill.key
-                for skill in catalog
-                if any(
-                    re.search(r"(?<!\w)" + re.escape(alias.lower()) + r"(?!\w)", content)
-                    for alias in [skill.name, *skill.aliases]
-                )
-            ]
             row.status = "PUBLISHED"
             row.source_checked_at = now
         for row in db.scalars(
@@ -183,7 +197,26 @@ def schedule_ingestion(db, now):
         run_at=now,
         expires_at=now + timedelta(hours=6),
     )
-    return 1
+    enqueue_job(
+        db,
+        kind="ingest_devfolio",
+        key=f"ingest-devfolio-{now.date()}-{now.hour // 6}",
+        payload={},
+        run_at=now,
+        expires_at=now + timedelta(hours=6),
+    )
+    from alignn.domains.opportunities.greenhouse import BOARDS
+
+    for board in BOARDS:
+        enqueue_job(
+            db,
+            kind="ingest_greenhouse",
+            key=f"ingest-greenhouse-{board}-{now.date()}-{now.hour // 6}",
+            payload={"board": board},
+            run_at=now,
+            expires_at=now + timedelta(hours=6),
+        )
+    return 2 + len(BOARDS)
 
 
 def main():

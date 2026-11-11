@@ -221,7 +221,10 @@ export default function Explore() {
                     <span className="mode">Apply externally</span>
                     <h3>{o.title}</h3>
                     <p>
-                      {o.location} · {o.work_mode.toLowerCase()}
+                      {o.location} ·{" "}
+                      {o.work_mode === "UNKNOWN"
+                        ? "work mode not specified"
+                        : o.work_mode.toLowerCase()}
                     </p>
                     <div className="event-bottom">
                       {o.registration_closes_at ? (

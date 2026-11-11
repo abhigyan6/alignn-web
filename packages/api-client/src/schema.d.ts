@@ -970,7 +970,7 @@ export interface components {
              * @default REMOTE
              * @enum {string}
              */
-            work_mode: "REMOTE" | "HYBRID" | "ONSITE";
+            work_mode: "REMOTE" | "HYBRID" | "ONSITE" | "UNKNOWN";
         };
         /** OpportunityMutation */
         OpportunityMutation: {
@@ -1054,7 +1054,7 @@ export interface components {
              * @default REMOTE
              * @enum {string}
              */
-            work_mode: "REMOTE" | "HYBRID" | "ONSITE";
+            work_mode: "REMOTE" | "HYBRID" | "ONSITE" | "UNKNOWN";
         };
         /** OrganizationCreate */
         OrganizationCreate: {
