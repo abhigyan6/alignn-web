@@ -1,7 +1,16 @@
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { SignIn } from "@clerk/nextjs";
 import { Suspense } from "react";
 import Link from "next/link";
-export default function Page() {
+export default async function Page() {
+  if (
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+    process.env.CLERK_SECRET_KEY
+  ) {
+    const { userId } = await auth();
+    if (userId) redirect("/auth/redirect");
+  }
   if (
     !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
     !process.env.CLERK_SECRET_KEY

@@ -2,11 +2,13 @@
 import { ClerkProvider, useAuth, UserButton } from "@clerk/nextjs";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import AccountLoading from "@/components/account-loading";
 import { setTokenGetter } from "@/lib/api";
 
 export function SessionBridge({ children }: { children: React.ReactNode }) {
   const { isLoaded, getToken } = useAuth();
+  const pathname = usePathname();
   const getTokenRef = useRef(getToken);
   const [ready, setReady] = useState(false);
 
@@ -21,7 +23,7 @@ export function SessionBridge({ children }: { children: React.ReactNode }) {
     return () => setTokenGetter(null);
   }, [isLoaded]);
 
-  return ready ? children : <AccountLoading />;
+  return pathname === "/" || ready ? children : <AccountLoading />;
 }
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (

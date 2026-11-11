@@ -1,4 +1,5 @@
 import "server-only";
+import { apiOrigin } from "./api-origin";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { components } from "../../../../packages/api-client/src/schema";
@@ -10,11 +11,13 @@ export async function requireAccountProfile(): Promise<AccountProfile> {
   const token = await getToken();
   if (!token) redirect("/login");
 
-  const apiOrigin = process.env.API_ORIGIN || "http://127.0.0.1:8000";
-  const response = await fetch(new URL("/api/v1/me/profile", apiOrigin), {
+  const backend = apiOrigin();
+  if (!backend) throw new Error("Account service is unavailable.");
+  const response = await fetch(new URL("/api/v1/me/profile", backend), {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
     redirect: "error",
+    signal: AbortSignal.timeout(10000),
   });
   if (!response.ok) throw new Error("Could not load your Alignn profile.");
   return response.json();

@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     clerk_jwt_key: str | None = None
     database_url: str
     retired_event_evidence_retention_days: int = Field(default=180, ge=30)
-    database_pool_size: int = Field(default=12, ge=1, le=100)
-    database_max_overflow: int = Field(default=100, ge=0, le=100)
+    database_pool_size: int = Field(default=3, ge=1, le=100)
+    database_max_overflow: int = Field(default=2, ge=0, le=100)
     database_pool_timeout: int = Field(default=30, ge=1, le=120)
     public_origin: str = "http://localhost:3000"
     mail_host: str | None = None

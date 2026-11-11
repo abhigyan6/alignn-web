@@ -1,6 +1,6 @@
 export default function Home() {
   return (
-    <main className="coming-soon-page">
+    <main id="main" className="coming-soon-page">
       <section className="coming-soon-card" aria-labelledby="coming-soon-title">
         <div className="coming-soon-mark" aria-hidden="true">
           <svg viewBox="0 0 48 48">
