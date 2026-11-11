@@ -60,3 +60,5 @@ Source allocation: Actions <=100 detail pages/source, one-second per-origin spac
 Matching preserves global candidate ranking while fetching profile evidence once per rebuild and excluding/pruning inactive candidates. Before launch measure representative match-table size and rebuild latency:1000 users ×5000 matches can exceed1GB before indexes. Current small-catalog measurements cannot validate that scenario. No Redis, sharding, LocalStack or new paid infrastructure is introduced.
 
 Dated local capacity sample (11 November):45 catalog rows and54 match snapshots; PostgreSQL total relation sizes including allocated indexes/TOAST were1,236,992 bytes for opportunities and114,688 bytes for match snapshots. This small existing dataset is not a load test or a per-row capacity guarantee.
+
+Updated reviewed collector `add4020` also passed [run43056511188](https://github.com/abhigyan6/alignn-scraper/actions/runs/43056511188) and was acknowledged APPLIED by the restarted local worker. The workflow remains private and production cron remains gated off.
