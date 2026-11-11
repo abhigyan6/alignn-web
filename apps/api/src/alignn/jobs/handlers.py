@@ -97,12 +97,20 @@ def ingest_remotive(payload, adapters, key):
 
 
 def ingest_devfolio(payload, adapters, key):
+    from alignn.config import settings
+
+    if settings.scraper_sync_enabled:
+        return
     from alignn.domains.opportunities.devfolio import sync_devfolio
 
     sync_devfolio()
 
 
 def ingest_greenhouse(payload, adapters, key):
+    from alignn.config import settings
+
+    if settings.scraper_sync_enabled:
+        return
     from alignn.domains.opportunities.greenhouse import BOARDS, sync_board
 
     board = payload.get("board")
@@ -121,3 +129,30 @@ def dispatch(kind: str, payload: dict, adapters: Adapters, key: str):
     if not handler:
         raise PermanentDeliveryError("unsupported_job")
     handler(payload, adapters, key)
+
+
+def poll_scraper(payload, adapters, key):
+    from alignn.config import settings
+    from alignn.domains.opportunities.github_sync import poll
+
+    if settings.scraper_sync_enabled:
+        poll(settings)
+
+
+def import_scraper(payload, adapters, key):
+    from alignn.config import settings
+    from alignn.domains.opportunities.github_sync import import_artifact
+
+    if settings.scraper_sync_enabled:
+        import_artifact(settings, payload)
+
+
+def recheck_scraper(payload, adapters, key):
+    from alignn.domains.opportunities.recheck import recheck_source
+
+    recheck_source(payload["source"])
+
+
+HANDLERS.update(
+    poll_scraper=poll_scraper, import_scraper=import_scraper, recheck_scraper=recheck_scraper
+)

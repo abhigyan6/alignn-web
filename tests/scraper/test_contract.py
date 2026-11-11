@@ -146,3 +146,58 @@ def test_bundle_does_not_extract_paths_or_accept_duplicate_members():
         z.writestr("../opportunities.json", "{}")
     with pytest.raises(ValueError):
         read_bundle(stream.getvalue(), NOW)
+
+
+def test_devfolio_missing_country_is_skipped_and_dates_are_distinct():
+    from alignn_scraper.parsers import parse_devfolio
+
+    raw = {
+        "uuid": "123456781234123412341234567890ab",
+        "slug": "student-build",
+        "country": None,
+        "type": "HACKATHON",
+        "name": "Student buildathon",
+        "desc": "Build useful Python applications.",
+        "is_online": False,
+        "city": "Bhopal",
+        "settings": {},
+        "starts_at": None,
+        "ends_at": None,
+    }
+
+    def document(value):
+        return html({}, {"props": {"pageProps": {"hackathon": value}}})
+
+    assert (
+        parse_devfolio(document(raw), "https://student-build.devfolio.co/", NOW) is None
+    )
+    value = parse_devfolio(
+        document({**raw, "country": "India"}), "https://student-build.devfolio.co/", NOW
+    )
+    assert value.registration_closes_at is None and value.ends_at is None
+
+
+def test_greenhouse_intern_boundary_and_unknown_location():
+    from alignn_scraper.parsers import parse_greenhouse
+
+    raw = {
+        "id": 123,
+        "title": "Software Intern",
+        "content": "<p>Build useful software.</p>",
+        "location": {"name": "Bengaluru"},
+        "absolute_url": "https://stripe.com/jobs/search?gh_jid=123",
+    }
+    assert parse_greenhouse(raw, "stripe", NOW).work_mode == "UNKNOWN"
+    assert parse_greenhouse({**raw, "title": "Internal Manager"}, "stripe", NOW) is None
+    assert (
+        parse_greenhouse({**raw, "location": {"name": "Remote"}}, "stripe", NOW) is None
+    )
+
+
+def test_known_external_country_does_not_become_indian_by_timezone():
+    ld = event_ld("US")
+    ld["timezone"] = "Asia/Kolkata"
+    assert (
+        parse_hackindia(html(ld), "https://hackindia.org/2026/test-hackathon", NOW)
+        is None
+    )

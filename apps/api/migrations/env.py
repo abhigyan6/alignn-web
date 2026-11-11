@@ -5,6 +5,7 @@ from alignn.db import Base, engine
 from alignn.domains.applications import models as application_models  # noqa: F401
 from alignn.domains.files import models as file_models  # noqa: F401
 from alignn.domains.identity import models  # noqa: F401
+from alignn.domains.opportunities import ingestion_models  # noqa: F401
 from alignn.domains.opportunities import models as opportunity_models  # noqa: F401
 from alignn.domains.organizations import models as organization_models  # noqa: F401
 from alignn.domains.participation import models as participation_models  # noqa: F401

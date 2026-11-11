@@ -215,7 +215,7 @@ def parse_luma(body, url, now):
 
 def parse_devfolio(body, url, now):
     raw = Page(body).next_data()["hackathon"]
-    if raw.get("country", "").casefold() != "india" or raw.get("type") != "HACKATHON":
+    if str(raw.get("country") or "").casefold() != "india" or raw.get("type") != "HACKATHON":
         return None
     if url != f"https://{raw['slug']}.devfolio.co/":
         raise ValueError("event_identity_changed")

@@ -52,11 +52,22 @@ def enqueue_job(
     return id or db.scalar(select(Job.id).where(Job.key == key))
 
 
-def lease_jobs(db: Session, *, worker_id: str, now: datetime, limit: int) -> list[JobLease]:
+COLLECTION_KINDS = ("ingest_remotive", "ingest_devfolio", "ingest_greenhouse", "recheck_scraper")
+
+
+def lease_jobs(
+    db: Session, *, worker_id: str, now: datetime, limit: int, lane: str = "all"
+) -> list[JobLease]:
     runnable = or_(
         and_(Job.status == "QUEUED", Job.run_at <= now),
         and_(Job.status == "RUNNING", Job.lease_until <= now),
     )
+    if lane not in {"all", "maintenance", "collection"}:
+        raise ValueError("invalid_worker_lane")
+    if lane == "maintenance":
+        runnable = and_(runnable, Job.kind.not_in(COLLECTION_KINDS))
+    elif lane == "collection":
+        runnable = and_(runnable, Job.kind.in_(COLLECTION_KINDS))
     jobs = db.scalars(
         select(Job)
         .where(runnable)
@@ -168,10 +179,10 @@ def process_lease(lease: JobLease, adapters: Adapters, clock: Clock) -> None:
         renewal.join(timeout=1)
 
 
-def run_once(adapters: Adapters, *, worker_id: str) -> int:
+def run_once(adapters: Adapters, *, worker_id: str, lane: str = "all") -> int:
     # Sequential dispatch leases one item so later jobs do not expire while waiting.
     with SessionLocal.begin() as db:
-        leases = lease_jobs(db, worker_id=worker_id, now=utcnow(), limit=1)
+        leases = lease_jobs(db, worker_id=worker_id, now=utcnow(), limit=1, lane=lane)
     for lease in leases:
         process_lease(lease, adapters, Clock())
     return len(leases)
@@ -182,11 +193,12 @@ def main():
 
     parser = argparse.ArgumentParser(description="Alignn background worker")
     parser.add_argument("--once", action="store_true")
+    parser.add_argument("--lane", choices=["all", "maintenance", "collection"], default="all")
     args = parser.parse_args()
     adapters = Adapters.configured(settings)
     worker_id = str(uuid4())
     while True:
-        count = run_once(adapters, worker_id=worker_id)
+        count = run_once(adapters, worker_id=worker_id, lane=args.lane)
         if args.once:
             break
         if not count:

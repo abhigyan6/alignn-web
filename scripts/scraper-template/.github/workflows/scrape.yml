@@ -1,0 +1,114 @@
+name: Scrape Indian opportunities
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Public source to refresh
+        type: choice
+        default: all
+        options:
+          - all
+          - hackindia
+          - luma
+          - devfolio
+          - greenhouse-stripe
+          - greenhouse-figma
+          - greenhouse-razorpaysoftwareprivatelimited
+  schedule:
+    - cron: '17 */6 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: india-opportunity-refresh
+  cancel-in-progress: false
+# Repeated pending refreshes coalesce. Cron jobs stay skipped until readiness/quota review.
+env:
+  PYTHONPATH: src
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  PYTHONDONTWRITEBYTECODE: '1'
+jobs:
+  matrix:
+    if: github.event_name != 'schedule' || vars.SCRAPER_SCHEDULE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      sources: ${{ steps.sources.outputs.sources }}
+    steps:
+      - id: sources
+        env:
+          SOURCE: ${{ inputs.source || 'all' }}
+        run: |
+          python - <<'PY'
+          import json, os
+          allowed = ['hackindia', 'luma', 'devfolio', 'greenhouse-stripe', 'greenhouse-figma', 'greenhouse-razorpaysoftwareprivatelimited']
+          selected = os.environ['SOURCE']
+          if selected != 'all' and selected not in allowed:
+              raise SystemExit('Unsupported source')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('sources=' + json.dumps(allowed if selected == 'all' else [selected]) + '\n')
+          PY
+  collect:
+    needs: matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        source: ${{ fromJSON(needs.matrix.outputs.sources) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --require-hashes -r requirements.lock
+      - run: python -m pytest -q
+      - name: Collect public metadata
+        continue-on-error: true
+        env:
+          SOURCE: ${{ matrix.source }}
+        run: python -m alignn_scraper --source "$SOURCE" --output output/opportunities.zip
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: source-${{ matrix.source }}
+          path: output/opportunities.zip
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+  report:
+    needs: collect
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --require-hashes -r requirements.lock
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: source-*
+          path: intermediate
+      - name: Validate and merge source partitions
+        run: |
+          python -m alignn_scraper --merge intermediate/*/opportunities.zip --output output/opportunities.zip > output-summary.json
+          python - <<'PY'
+          import json, os
+          report=json.load(open('output-summary.json'))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('## Collection results\n\nSource | Status | Accepted | Failed\n---|---|---:|---:\n')
+              for item in report['sources']:
+                  f.write(f"{item['source']} | {item['status']} | {item['accepted']} | {item['failed']}\n")
+              f.write('\nCollection success is not backend import acknowledgement.\n')
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alignn-opportunities-v1
+          path: output/opportunities.zip
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     database_pool_size: int = Field(default=3, ge=1, le=100)
     database_max_overflow: int = Field(default=2, ge=0, le=100)
     database_pool_timeout: int = Field(default=30, ge=1, le=120)
+    scraper_sync_enabled: bool = False
+    scraper_repository: str = "abhigyan6/alignn-scraper"
+    scraper_repository_id: int = Field(default=0, ge=0)
+    scraper_workflow_id: int = Field(default=0, ge=0)
+    scraper_workflow_path: str = ".github/workflows/scrape.yml"
+    scraper_branch: str = "main"
+    scraper_auth_mode: Literal["token", "cli"] = "token"
+    scraper_github_token: SecretStr | None = None
     public_origin: str = "http://localhost:3000"
     mail_host: str | None = None
     mail_port: int = 1025
@@ -64,6 +72,13 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "IAM object storage uses native AWS endpoints and role credentials"
                 )
+        if self.scraper_sync_enabled:
+            if not self.scraper_repository_id or not self.scraper_workflow_id:
+                raise ValueError("Scraper sync requires pinned repository/workflow identities")
+            if self.scraper_auth_mode == "cli" and self.environment == "production":
+                raise ValueError("CLI scraper authentication is development-only")
+            if self.scraper_auth_mode == "token" and not self.scraper_github_token:
+                raise ValueError("Scraper sync requires private Actions-read access")
         if self.environment == "production":
             if self.auth_provider == "clerk" and not self.clerk_secret_key:
                 raise ValueError("Clerk authentication requires a secret key")

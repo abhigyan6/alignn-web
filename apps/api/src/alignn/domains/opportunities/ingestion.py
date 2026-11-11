@@ -107,6 +107,10 @@ def sync_remotive(client=None):
 
 def schedule_ingestion(db, now):
     from alignn.jobs.worker import enqueue_job
+    from alignn.config import settings
+
+    if settings.scraper_sync_enabled:
+        return 0
 
     enqueue_job(
         db,
