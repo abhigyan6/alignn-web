@@ -103,6 +103,10 @@
 .clerkCard {
   padding: 0 !important;
 }
+.clerkBox {
+  /* Clerk's inner clipping cuts field borders and keyboard focus rings. */
+  overflow: visible !important;
+}
 .clerkTitle {
   color: var(--alignn-auth-ink);
   font-size: 1.75rem;
