@@ -58,4 +58,8 @@ Follow-up work includes source ingestion, resume parsing, the full personalized 
 
 Manrope is served locally through @fontsource/manrope under SIL Open Font License 1.1 (copyright The Manrope Project Authors). The drawn loop mark is a proposed vector variation, not an exact reproduction of the supplied brand master.
 
- Production deployment, paid services and migration of existing users are outside the current repository setup.
+Production deployment, paid services and migration of existing users are outside the current repository setup.
+
+## Contributing
+
+Use a new task branch and a pull request; never push directly to main. See [CLAUDE.md](CLAUDE.md) for Conventional Commits and local pre-commit setup, and [the redacted history-scan summary](docs/reviews/2026-11-12-git-hygiene.md).
