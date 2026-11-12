@@ -22,3 +22,39 @@ uploads/
 
 .clerk/
 .vercel
+
+# Local environment and authentication files (examples remain shareable)
+.envrc
+.direnv/
+!.env.*.example
+*.local
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+# Build/package caches
+build/
+out/
+.turbo/
+.cache/
+*.egg-info/
+.mypy_cache/
+.pyright/
+.tox/
+.nox/
+.uv/
+# OS and editor state
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+# Private scanner reports
+gitleaks-report*
+secret-scan-report*

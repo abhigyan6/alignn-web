@@ -1,5 +1,7 @@
 # Alignn engineering instructions
 
+- Create a new `codex/<task>` branch for each task, make small Conventional Commits, and open a PR describing changes, rationale, testing and risks. Never push directly to main. Read CLAUDE.md for contributor tooling.
+
 - Read the approved specification and implementation plan before changing product behavior.
 - Build a fresh Next.js and FastAPI application. PostgreSQL is the source of truth; use real PostgreSQL for integration tests.
 - Keep authorization and business writes in FastAPI. The web app must not have a second ORM or independent permission model.
@@ -14,7 +16,9 @@
 - Do not provision paid infrastructure, change DNS or publish a deployment without the user's explicit request.
 
 <!-- BEGIN AWS Agent Toolkit rules -->
+
 # AWS Guidance
+
 - Where these AWS rules conflict with the project's own instructions, the
   project's instructions take precedence.
 - Prefer the AWS MCP Server for AWS interactions — it provides sandboxed
@@ -49,6 +53,7 @@
   principles.
 - Do not use em dashes in AWS resource names or descriptions. Use
   hyphens instead.
+
 ## Before you conclude
 
 - Before deciding the AWS account can't hold what the request asks for,
@@ -58,6 +63,7 @@
   creation date or a stored-bytes count, or from one query that failed or
   came back empty. Read the records another way, across the full time
   range, before reporting them absent.
+
 ## Secret Safety
 
 - MUST load the `aws-secrets-manager` skill first for any secret,
@@ -66,4 +72,5 @@
   NOT hit the Secrets Manager Agent daemon directly. MUST use
   `{{resolve:secretsmanager:secret-id:SecretString:json-key}}` with
   `asm-exec` so the secret resolves at runtime without entering context.
+
 <!-- END AWS Agent Toolkit rules -->
