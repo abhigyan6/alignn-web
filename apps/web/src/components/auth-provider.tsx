@@ -30,7 +30,8 @@ export function SessionBridge({ children }: { children: React.ReactNode }) {
     pathname === "/signup" ||
     pathname.startsWith("/signup/");
   if (!ready && pathname === "/explore") return <DiscoveryLoading />;
-  return pathname === "/" || authPage || ready ? (
+  const publicPolicy = ["/privacy", "/terms", "/cookies"].includes(pathname);
+  return pathname === "/" || publicPolicy || authPage || ready ? (
     children
   ) : (
     <AccountLoading onboarding={pathname.startsWith("/onboarding")} />

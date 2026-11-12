@@ -106,7 +106,16 @@ export default function AuthShell({
           className={`${styles.panel} auth-panel`}
           aria-label="Account access"
         >
-          <div className={styles.formSlot}>{children}</div>
+          <div className={styles.formSlot}>
+            {children}
+            <p
+              style={{ fontSize: "13px", lineHeight: 1.7, textAlign: "center" }}
+            >
+              Read our <Link href="/terms">Terms</Link> and{" "}
+              <Link href="/privacy">Privacy policy</Link> before creating an
+              account.
+            </p>
+          </div>
           <Link className={styles.browseLink} href="/explore">
             Continue browsing first
           </Link>

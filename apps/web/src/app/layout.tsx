@@ -2,6 +2,7 @@ import { AuthProvider, SessionBridge } from "@/components/auth-provider";
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import CookieNotice from "@/components/cookie-notice";
 import AppNavigation from "@/components/app-navigation";
 import { BrandMark } from "@/components/icon";
 export const metadata: Metadata = {
@@ -24,12 +25,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <AppNavigation authenticated={configured} />
       </header>
       {configured ? <SessionBridge>{children}</SessionBridge> : children}
+      <CookieNotice />
       <footer className="site-footer">
         <Link className="footer-brand" href="/">
           alignn<span>Find your next opportunity.</span>
         </Link>
         <p>Built for students. Connected to the original source.</p>
-        <Link href="/explore">Explore opportunities</Link>
+        <nav
+          aria-label="Support and policies"
+          style={{ display: "flex", flexWrap: "wrap", gap: "12px 20px" }}
+        >
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
+          <Link href="/cookies">Cookies</Link>
+          <a href="mailto:contact@onlyward.app">Contact</a>
+        </nav>
       </footer>
     </>
   );
