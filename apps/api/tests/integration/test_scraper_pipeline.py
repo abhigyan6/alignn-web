@@ -1,12 +1,13 @@
 from datetime import timedelta
 from uuid import uuid4
 
+from sqlalchemy import select
+
 from alignn.db import SessionLocal, utcnow
 from alignn.domains.opportunities.models import Opportunity, SavedOpportunity
 from alignn.domains.opportunities.schemas import SearchQuery
 from alignn.domains.opportunities.service import search_opportunities
 from alignn.domains.organizations.models import Organization
-from sqlalchemy import select
 
 
 def add_opportunity(db, **kwargs):
@@ -61,6 +62,7 @@ def test_retirement_and_expiry_preserve_saved_history(make_user):
 
 def test_remotive_jobs_never_fetch_and_are_not_scheduled(monkeypatch):
     import httpx
+
     from alignn.domains.opportunities.ingestion import schedule_ingestion, sync_remotive
     from alignn.jobs.handlers import dispatch
     from alignn.jobs.models import Job
@@ -351,6 +353,7 @@ def test_artifact_failure_has_a_visible_terminal_receipt(monkeypatch):
     from types import SimpleNamespace
 
     import pytest
+
     from alignn.domains.opportunities import github_sync
     from alignn.domains.opportunities.ingestion_models import ImportReceipt
     from alignn.jobs.models import Job
