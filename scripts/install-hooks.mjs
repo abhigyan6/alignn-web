@@ -3,11 +3,10 @@ import { existsSync } from "node:fs";
 if (!process.env.CI && existsSync(".git")) {
   let current = "";
   try {
-    current = execFileSync(
-      "git",
-      ["config", "--local", "--get", "core.hooksPath"],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
-    );
+    current = execFileSync("git", ["config", "--get", "core.hooksPath"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
   } catch (error) {
     if (error.status !== 1) throw error;
   }
