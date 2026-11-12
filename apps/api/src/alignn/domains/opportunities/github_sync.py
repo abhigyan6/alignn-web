@@ -9,6 +9,7 @@ from datetime import timedelta
 from urllib.parse import urlsplit
 
 import httpx
+
 from alignn_scraper.bundle import MAX_ZIP, digest
 
 API = "https://api.github.com"
