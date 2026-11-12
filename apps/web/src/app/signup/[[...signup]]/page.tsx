@@ -18,6 +18,7 @@ export default async function Page() {
   );
   return (
     <AuthShell
+      signUp
       title="A starting point that feels like you."
       description="Create an account, add your interests and build a more relevant opportunity feed."
     >

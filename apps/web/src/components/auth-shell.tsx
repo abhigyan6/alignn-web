@@ -56,10 +56,12 @@ export default function AuthShell({
   title,
   description,
   children,
+  signUp = false,
 }: {
   title: string;
   description: string;
   children: ReactNode;
+  signUp?: boolean;
 }) {
   return (
     <main id="main" className={styles.page}>
@@ -111,9 +113,18 @@ export default function AuthShell({
             <p
               style={{ fontSize: "13px", lineHeight: 1.7, textAlign: "center" }}
             >
-              Read our <Link href="/terms">Terms</Link> and{" "}
-              <Link href="/privacy">Privacy policy</Link> before creating an
-              account.
+              {signUp ? (
+                <>
+                  By creating an account, you agree to our{" "}
+                  <Link href="/terms">Terms &amp; Conditions</Link> and
+                  acknowledge our <Link href="/privacy">Privacy Policy</Link>.
+                </>
+              ) : (
+                <>
+                  Read our <Link href="/terms">Terms &amp; Conditions</Link> and{" "}
+                  <Link href="/privacy">Privacy Policy</Link>.
+                </>
+              )}
             </p>
           </div>
           <Link className={styles.browseLink} href="/explore">
