@@ -4,14 +4,14 @@ import json
 from datetime import timedelta
 from uuid import uuid4
 
-from alignn_scraper.models import SourceResult
-from alignn_scraper.parsers import parse_devfolio, parse_greenhouse, parse_hackindia, parse_luma
-from alignn_scraper.registry import SOURCES
-from alignn_scraper.transport import FetchError, PublicHTTP
 from sqlalchemy import or_, select
 from sqlalchemy.dialects.postgresql import insert
 
 from alignn.db import SessionLocal, utcnow
+from alignn_scraper.models import SourceResult
+from alignn_scraper.parsers import parse_devfolio, parse_greenhouse, parse_hackindia, parse_luma
+from alignn_scraper.registry import SOURCES
+from alignn_scraper.transport import FetchError, PublicHTTP
 
 from .import_scraped import apply_source
 from .ingestion_models import ScraperCursor

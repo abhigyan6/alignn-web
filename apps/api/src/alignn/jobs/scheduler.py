@@ -16,10 +16,9 @@ def expire_catalog(db, now):
 def schedule_scraper(db, now):
     from datetime import timedelta
 
-    from alignn_scraper.registry import SOURCES
-
     from alignn.config import settings
     from alignn.jobs.worker import enqueue_job
+    from alignn_scraper.registry import SOURCES
 
     if not settings.scraper_sync_enabled:
         return 0
