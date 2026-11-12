@@ -1,4 +1,5 @@
 import BrandLoader from "@/components/brand-loader";
+import styles from "@/components/loading.module.css";
 export default function AccountLoading({
   onboarding = false,
 }: {
@@ -7,29 +8,29 @@ export default function AccountLoading({
   return (
     <main
       id="main"
-      className={`account-skeleton ${onboarding ? "onboarding" : "workspace"}`}
+      className={`account-skeleton ${styles.account}`}
       aria-busy="true"
     >
-      <div className="account-loading-heading" role="status">
+      <div className={styles.accountHeading} role="status">
         <BrandLoader />
         <div>
-          <p className="loading-eyebrow">A moment to align</p>
           <h1>
-            {onboarding
-              ? "Making room for your next chapter."
-              : "Getting your account ready."}
+            {onboarding ? "Loading your profile…" : "Loading your workspace…"}
           </h1>
+          <p>Your information will appear here when it is ready.</p>
         </div>
       </div>
-      <div className="account-skeleton-content" aria-hidden="true">
-        <span className="skeleton skeleton-heading" />
-        <span className="skeleton skeleton-line short" />
-        <div className="skeleton-fields">
+      <div className={styles.panel} aria-hidden="true">
+        <span className={`${styles.shape} ${styles.panelTitle}`} />
+        <div className={styles.fields}>
           {Array.from({ length: 4 }, (_, index) => (
-            <span className="skeleton skeleton-field" key={index} />
+            <div className={styles.field} key={index}>
+              <span className={styles.shape} />
+              <span className={styles.shape} />
+            </div>
           ))}
         </div>
-        <span className="skeleton skeleton-action" />
+        <span className={`${styles.shape} ${styles.action}`} />
       </div>
     </main>
   );

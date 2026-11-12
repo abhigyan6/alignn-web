@@ -18,8 +18,8 @@ export default async function Page() {
   );
   return (
     <AuthShell
-      title="Make room for your next chapter."
-      description="Create your profile to find events, internships and opportunities that fit where you want to go."
+      title="A starting point that feels like you."
+      description="Create an account, add your interests and build a more relevant opportunity feed."
     >
       {configured ? (
         <Suspense

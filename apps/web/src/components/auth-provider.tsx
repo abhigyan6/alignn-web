@@ -46,9 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUpFallbackRedirectUrl="/auth/redirect"
       appearance={{
         variables: {
-          colorPrimary: "#123e2f",
+          colorPrimary: "#145640",
           fontFamily: "Manrope, Arial, sans-serif",
-          borderRadius: "6px",
+          borderRadius: "10px",
         },
       }}
     >
@@ -58,7 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 export function AccountControl() {
   const { isLoaded, isSignedIn } = useAuth();
-  if (!isLoaded) return <span role="status">Loading account…</span>;
+  if (!isLoaded)
+    return (
+      <span className="account-placeholder" role="status">
+        <span className="sr-only">Loading account…</span>
+      </span>
+    );
   return isSignedIn ? (
     <UserButton />
   ) : (

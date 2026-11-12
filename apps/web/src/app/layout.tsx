@@ -3,10 +3,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import AppNavigation from "@/components/app-navigation";
-import SiteIntro, { introScript } from "@/components/site-intro";
+import { BrandMark } from "@/components/icon";
 export const metadata: Metadata = {
   title: "Alignn · Find your next opportunity",
-  description: "Alignn is building a clearer path to your next opportunity.",
+  description:
+    "Discover Indian internships, hackathons and events. Build a student profile, save opportunities and track your next steps with Alignn.",
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
   const configured = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
@@ -17,31 +18,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </a>
       <header className="site-header">
         <Link className="brand" href="/">
-          <svg aria-hidden="true" viewBox="0 0 48 48">
-            <path
-              d="M12 12C19-2 38 9 32 22L13 37C0 42 1 20 17 20H31C49 20 47 47 30 42M31 10V34"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="5"
-              strokeLinecap="round"
-            />
-          </svg>
+          <BrandMark />
           alignn
         </Link>
         <AppNavigation authenticated={configured} />
       </header>
       {configured ? <SessionBridge>{children}</SessionBridge> : children}
       <footer className="site-footer">
-        <strong>Find your people. Find your next step.</strong>
-        <span>Discover. Save. Take your next step.</span>
+        <Link className="footer-brand" href="/">
+          alignn<span>Find your next opportunity.</span>
+        </Link>
+        <p>Built for students. Connected to the original source.</p>
+        <Link href="/explore">Explore opportunities</Link>
       </footer>
     </>
   );
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <script dangerouslySetInnerHTML={{ __html: introScript }} />
-        <SiteIntro />
         {configured ? <AuthProvider>{content}</AuthProvider> : content}
       </body>
     </html>

@@ -1,11 +1,21 @@
 import { defineConfig, devices } from "@playwright/test";
+import { existsSync } from "node:fs";
+
+const bravePath =
+  "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser";
+const executablePath =
+  process.env.PLAYWRIGHT_EXECUTABLE_PATH ??
+  (process.platform === "darwin" && existsSync(bravePath)
+    ? bravePath
+    : undefined);
+
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: false,
   use: {
     baseURL: "http://localhost:3000",
     trace: "retain-on-failure",
-    channel: "chrome",
+    launchOptions: executablePath ? { executablePath } : {},
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },

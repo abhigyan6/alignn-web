@@ -1,11 +1,14 @@
+"use client";
 import Link from "next/link";
-import { Opportunity } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { api, ApiError, Opportunity } from "@/lib/api";
+import Icon, { type IconName } from "@/components/icon";
 
 export function sourceLabel(source?: string | null) {
   if (source?.startsWith("Greenhouse:")) return "Employer careers";
   return source || "Alignn catalog";
 }
-
 export function opportunityDate(value: string, includeTime = false) {
   return new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
@@ -17,49 +20,135 @@ export function opportunityDate(value: string, includeTime = false) {
       : {}),
   }).format(new Date(value));
 }
+export function isClosed(o: Opportunity) {
+  const now = Date.now();
+  return Boolean(
+    (o.status && o.status !== "PUBLISHED") ||
+    (o.registration_closes_at &&
+      new Date(o.registration_closes_at).getTime() <= now) ||
+    (o.ends_at && new Date(o.ends_at).getTime() <= now),
+  );
+}
+export const categoryIcons: Record<string, IconName> = {
+  INTERNSHIP: "briefcase",
+  JOB: "briefcase",
+  HACKATHON: "code",
+  COMPETITION: "spark",
+  WORKSHOP: "calendar",
+  SCHOLARSHIP: "cap",
+};
 
 export default function OpportunityCard({
   opportunity: o,
+  saved = false,
+  onSavedChange,
 }: {
   opportunity: Opportunity;
+  saved?: boolean;
+  onSavedChange?: (saved: boolean) => void;
 }) {
+  const router = useRouter();
+  const [isSaved, setSaved] = useState(saved),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  useEffect(() => setSaved(saved), [saved]);
+  const closed = isClosed(o);
   const category = o.kind.toLowerCase().replaceAll("_", " ");
+  const company = o.organization_name.replace(/^Organizer listed on /, "Via ");
+  const initials = company
+    .replace(/^Via /, "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("");
+  const skills = [
+    ...new Set([...(o.required_skills ?? []), ...(o.preferred_skills ?? [])]),
+  ].slice(0, 3);
+  async function toggleSave() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/opportunities/${o.id}/save`, {
+        method: isSaved ? "DELETE" : "POST",
+      });
+      setSaved(!isSaved);
+      onSavedChange?.(!isSaved);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) router.push("/login");
+      else setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
-    <Link className="event opportunity-card" href={"/opportunities/" + o.id}>
+    <article
+      className={`event opportunity-card ${closed ? "opportunity-closed" : ""}`}
+    >
       <div className="opportunity-card-top">
-        <span className={"category-chip " + o.kind.toLowerCase()}>
-          {category}
-        </span>
-        <span className="card-arrow" aria-hidden="true">
-          ↗
-        </span>
+        <div
+          className={`company-monogram ${o.kind.toLowerCase()}`}
+          aria-hidden="true"
+        >
+          {initials}
+        </div>
+        <div className="card-identity">
+          <p className="opportunity-company">{company}</p>
+          <span className={`category-label ${o.kind.toLowerCase()}`}>
+            <Icon name={categoryIcons[o.kind] ?? "briefcase"} size={14} />
+            {category}
+          </span>
+        </div>
+        <button
+          className={`bookmark-button ${isSaved ? "is-saved" : ""}`}
+          aria-label={`${isSaved ? "Remove saved" : "Save"} ${o.title}`}
+          aria-pressed={isSaved}
+          disabled={busy}
+          onClick={toggleSave}
+        >
+          <Icon name="bookmark" />
+        </button>
       </div>
       <div className="event-body">
-        <p className="opportunity-company">{o.organization_name}</p>
-        <h3>{o.title}</h3>
+        <h3>
+          <Link href={`/opportunities/${o.id}`}>{o.title}</Link>
+        </h3>
         <p className="opportunity-location">
-          {o.location}
-          <span aria-hidden="true"> · </span>
-          {o.work_mode === "UNKNOWN"
-            ? "Work mode not specified"
-            : o.work_mode.toLowerCase()}
+          <Icon name="location" size={16} />
+          <span>{o.location}</span>
+          {o.work_mode !== "UNKNOWN" && (
+            <span className="work-mode">{o.work_mode.toLowerCase()}</span>
+          )}
         </p>
-        <div className="skill-chips" aria-label="Listed or inferred skills">
-          {(o.preferred_skills ?? []).slice(0, 3).map((skill) => (
-            <span key={skill}>{skill}</span>
-          ))}
-        </div>
+        {skills.length > 0 && (
+          <div className="skill-chips" aria-label="Listed or inferred skills">
+            {skills.map((skill) => (
+              <span key={skill}>{skill}</span>
+            ))}
+          </div>
+        )}
       </div>
       <div className="event-bottom">
-        {o.registration_closes_at ? (
-          <time dateTime={o.registration_closes_at}>
-            Apply by {opportunityDate(o.registration_closes_at)} · IST
-          </time>
-        ) : (
-          <span>Deadline not published</span>
-        )}
+        <span className={closed ? "closed-label" : "deadline-label"}>
+          <Icon name="clock" size={15} />
+          {closed ? (
+            "Closed"
+          ) : o.registration_closes_at ? (
+            <time dateTime={o.registration_closes_at}>
+              Apply by {opportunityDate(o.registration_closes_at)} IST
+            </time>
+          ) : (
+            "Deadline not published"
+          )}
+        </span>
         <small>{sourceLabel(o.source_name)}</small>
       </div>
-    </Link>
+      {error && (
+        <p className="card-error" role="alert">
+          {error}
+        </p>
+      )}
+    </article>
   );
 }

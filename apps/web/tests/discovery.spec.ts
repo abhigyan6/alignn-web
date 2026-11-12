@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test("discovery loads real API and keeps filters usable", async ({ page }) => {
   await page.goto("/explore");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "Find your people",
+    "Find your next opportunity",
   );
   const response = page.waitForResponse(
     (r) =>
@@ -158,7 +158,7 @@ test("real internship opens consistent details with an external application link
   await card.click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-  const apply = page.getByRole("link", { name: "Apply externally" });
+  const apply = page.getByRole("link", { name: /^Apply on / });
   await expect(apply).toHaveAttribute("href", /^https:\/\//);
   await expect(apply).toHaveAttribute("target", "_blank");
   await expect(

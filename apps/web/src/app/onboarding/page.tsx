@@ -11,7 +11,7 @@ async function ProtectedScreen({
 }) {
   const profile = await requireAccountProfile();
   const editing = (await searchParams).edit === "1";
-  if (profile.onboarding_complete && !editing) redirect("/workspace");
+  if (profile.onboarding_complete && !editing) redirect("/explore");
   return <Screen initialProfile={profile} editing={editing} />;
 }
 export default function Page({ searchParams }: { searchParams: SearchParams }) {

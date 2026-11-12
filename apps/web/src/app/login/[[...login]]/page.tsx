@@ -18,8 +18,8 @@ export default async function Page() {
   );
   return (
     <AuthShell
-      title="Find the opportunity that fits your next chapter."
-      description="Sign in to keep your events, internships and competitions in one considered workspace."
+      title="Welcome back. Find what’s next."
+      description="Sign in to see your recommendations, saved opportunities and application progress."
     >
       {configured ? (
         <Suspense

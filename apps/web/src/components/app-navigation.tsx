@@ -1,35 +1,62 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Suspense } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { AccountControl } from "@/components/auth-provider";
+import Icon from "@/components/icon";
 
-export default function AppNavigation({
-  authenticated,
-}: {
-  authenticated: boolean;
-}) {
-  const pathname = usePathname();
-  if (
-    pathname === "/" ||
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/signup")
-  )
-    return null;
-  const discovering =
-    pathname === "/explore" || pathname.startsWith("/opportunities/");
+function Navigation({ authenticated }: { authenticated: boolean }) {
+  const pathname = usePathname(),
+    params = useSearchParams();
+  const authPage =
+    pathname.startsWith("/login") || pathname.startsWith("/signup");
+  if (authPage)
+    return (
+      <Link className="auth-back-link" href="/explore">
+        Browse opportunities <Icon name="arrow" size={17} />
+      </Link>
+    );
+  const tab = params.get("tab") ?? "saved";
+  const links = [
+    {
+      label: "Discover",
+      href: "/explore",
+      icon: "grid" as const,
+      active: pathname === "/explore" || pathname.startsWith("/opportunities/"),
+    },
+    {
+      label: "Saved",
+      href: "/workspace?tab=saved",
+      icon: "bookmark" as const,
+      active: pathname === "/workspace" && tab !== "applications",
+    },
+    {
+      label: "Applications",
+      href: "/workspace?tab=applications",
+      icon: "briefcase" as const,
+      active: pathname === "/workspace" && tab === "applications",
+    },
+    {
+      label: "Profile",
+      href: "/onboarding?edit=1",
+      icon: "user" as const,
+      active: pathname === "/onboarding",
+    },
+  ];
   return (
     <>
       <nav className="app-navigation" aria-label="Main navigation">
-        <Link href="/explore" aria-current={discovering ? "page" : undefined}>
-          Discover
-        </Link>
-        <Link
-          href="/workspace"
-          prefetch={false}
-          aria-current={pathname === "/workspace" ? "page" : undefined}
-        >
-          My workspace
-        </Link>
+        {links.map((link) => (
+          <Link
+            key={link.label}
+            href={link.href}
+            prefetch={link.href === "/explore"}
+            aria-current={link.active ? "page" : undefined}
+          >
+            <Icon name={link.icon} size={18} />
+            {link.label}
+          </Link>
+        ))}
       </nav>
       <div className="header-account">
         {authenticated ? (
@@ -41,5 +68,14 @@ export default function AppNavigation({
         )}
       </div>
     </>
+  );
+}
+export default function AppNavigation(props: { authenticated: boolean }) {
+  return (
+    <Suspense
+      fallback={<div className="navigation-placeholder" aria-hidden="true" />}
+    >
+      <Navigation {...props} />
+    </Suspense>
   );
 }

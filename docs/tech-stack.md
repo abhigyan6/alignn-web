@@ -24,3 +24,24 @@ Alignn is an India-first career opportunity discovery platform built with Next.j
 | Deployment target | AWS application hosting + Heroku PostgreSQL + private S3 files, as agreed. Production activation is pending; this scraper change did not deploy infrastructure. |
 
 The private collector is [abhigyan6/alignn-scraper](https://github.com/abhigyan6/alignn-scraper). Operational setup and remaining activation steps are in [the scraper runbook](runbooks/india-scraper.md).
+
+## Why this stack
+
+These are engineering reasons for the existing choice, not benchmark results or a claim that this is the only suitable stack.
+
+- **Next.js / React / TypeScript:** public opportunity pages and interactive discovery, profile and application screens can share components and types. A framework does not establish the visual design: tokens, layouts, content and interaction states still need deliberate implementation.
+- **Python / FastAPI:** collection, normalization, profile matching and the API can share Python data models and libraries. Python also leaves a practical path for future document extraction, which is not implemented just because a resume can be uploaded. FastAPI supplies request validation and OpenAPI contracts.
+- **PostgreSQL:** profiles, skills, saved opportunities, source identities and application history have relational constraints. Transactions and unique constraints support consistent writes and deduplication; existing full-text search and durable job leasing avoid introducing separate search/queue services before they are needed.
+- **Clerk:** reuses the selected authentication provider rather than implementing password handling and recovery ourselves. Alignn's profile, onboarding state and authorization remain application responsibilities.
+- **Separate Python worker:** long-running collection and file-processing work need not occupy an API request. The worker shares the backend code and PostgreSQL queue, preserving the modular-monolith architecture.
+
+The tradeoff is running a JavaScript frontend plus Python API/worker processes, with contracts between them. This is more operational work than one server-rendered application. It is a reason to keep deployment simple, not evidence that another framework would fix UI consistency or collection quality. Hosting vendors can change without rewriting this stack.
+
+## Competitor disclosures checked 12 November 2026
+
+| Platform | Public evidence | Limit of the evidence |
+|---|---|---|
+| Unstop | Its own [October 2022 developer vacancy](https://unstop.com/jobs/software-developer-meanmernlamp-stack-developer-unstop-271195/amp) lists Angular, PHP Laravel, Node.js, MySQL 8, an unspecified NoSQL database and AWS services. | Historical disclosure, not a verified inventory of its current platform. The vacancy uses the imprecise wording "AngularJS 10"; no current Angular version is inferred. |
+| Devfolio | Its [About page footer](https://devfolio.co/about/) credits Gatsby.js and Framer Motion. Its [backend engineering vacancy](https://devfolio.notion.site/Backend-Engineer-6266e2d8da6a4c12b8686ba759d4a528) names Node.js, Python, Go, Redis, MySQL and PostgreSQL. | The footer describes the marketing site. The undated vacancy is marked "Not actively hiring" and does not establish the complete current backend. |
+
+No full current stack is asserted for Internshala, Hack2skill or other competitors without a reliable platform-owned disclosure. Jobs advertised by other employers on a platform, or courses it sells, do not establish that platform's implementation. Competitor choices are useful context; Alignn's product requirements and operating capacity should drive its own choices.

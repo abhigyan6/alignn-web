@@ -1,21 +1,30 @@
 "use client";
-import OpportunityCard from "@/components/opportunity-card";
-import OpportunitySkeleton from "@/components/opportunity-skeleton";
 import Link from "next/link";
-import { useEffect, useState, FormEvent } from "react";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import OpportunityCard, { categoryIcons } from "@/components/opportunity-card";
+import OpportunitySkeleton from "@/components/opportunity-skeleton";
+import DiscoveryLoading from "@/components/discovery-loading";
+import Icon, { type IconName } from "@/components/icon";
 import { api, Opportunity } from "@/lib/api";
+
 const categories = [
-  ["", "Everything"],
-  ["INTERNSHIP", "Internships"],
-  ["JOB", "Jobs"],
-  ["HACKATHON", "Hackathons"],
-  ["COMPETITION", "Competitions"],
-  ["WORKSHOP", "Workshops"],
+  { value: "", label: "Everything", icon: "grid" },
+  { value: "INTERNSHIP", label: "Internships", icon: "briefcase" },
+  { value: "HACKATHON", label: "Hackathons", icon: "code" },
+  { value: "WORKSHOP", label: "Workshops", icon: "calendar" },
+  { value: "JOB", label: "Jobs", icon: "briefcase" },
+  { value: "COMPETITION", label: "Competitions", icon: "spark" },
 ];
-export default function Explore() {
-  const [kind, setKind] = useState(""),
-    [query, setQuery] = useState(""),
-    [search, setSearch] = useState(""),
+function Explore() {
+  const params = useSearchParams(),
+    router = useRouter();
+  const initialKind = params.get("kind") ?? "";
+  const [kind, setKind] = useState(
+      categories.some((c) => c.value === initialKind) ? initialKind : "",
+    ),
+    [query, setQuery] = useState(params.get("q") ?? ""),
+    [search, setSearch] = useState(params.get("q") ?? ""),
     [sort, setSort] = useState("match");
   const [items, setItems] = useState<Opportunity[]>([]),
     [loading, setLoading] = useState(true),
@@ -24,10 +33,25 @@ export default function Explore() {
     [next, setNext] = useState<number | null>(null),
     [cursor, setCursor] = useState(0),
     [attempt, setAttempt] = useState(0),
-    [polls, setPolls] = useState(0);
+    [polls, setPolls] = useState(0),
+    [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const loadedKey = useRef("");
   useEffect(() => {
-    setPolls(0);
-  }, [kind, search, sort]);
+    const nextKind = params.get("kind") ?? "",
+      nextSearch = params.get("q") ?? "";
+    setKind(categories.some((c) => c.value === nextKind) ? nextKind : "");
+    setSearch(nextSearch);
+    setQuery(nextSearch);
+    setCursor(0);
+  }, [params]);
+  useEffect(() => {
+    const controller = new AbortController();
+    api<{ items: Opportunity[] }>("/me/saved", { signal: controller.signal })
+      .then((data) => setSavedIds(new Set(data.items.map((o) => o.id))))
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+  useEffect(() => setPolls(0), [kind, search, sort]);
   useEffect(() => {
     if (rank !== "PENDING" || sort !== "match" || polls >= 6) return;
     const timer = setTimeout(() => {
@@ -38,254 +62,328 @@ export default function Explore() {
   }, [rank, sort, attempt, polls]);
   useEffect(() => {
     const controller = new AbortController();
-    let active = true;
+    const key = [kind, search, sort, cursor].join("|");
+    if (loadedKey.current !== key) {
+      setItems([]);
+      setNext(null);
+      setRank("");
+    }
     setLoading(true);
     setError("");
-    const params = new URLSearchParams({
+    const options = new URLSearchParams({
       q: search,
       sort,
       cursor: String(cursor),
       limit: "12",
     });
-    if (kind) params.set("kind", kind);
+    if (kind) options.set("kind", kind);
     api<{
       items: Opportunity[];
       ranking_status: string;
       next_cursor: number | null;
-    }>("/opportunities?" + params, { signal: controller.signal })
+    }>("/opportunities?" + options, { signal: controller.signal })
       .then((data) => {
-        if (active) {
+        if (!controller.signal.aborted) {
           setItems(data.items);
           setRank(data.ranking_status);
           setNext(data.next_cursor);
+          loadedKey.current = key;
         }
       })
       .catch((e) => {
-        if (active) setError(e.message);
+        if (!controller.signal.aborted) {
+          setError(e.message);
+          setNext(null);
+        }
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       });
-    return () => {
-      active = false;
-      controller.abort();
-    };
+    return () => controller.abort();
   }, [kind, search, sort, cursor, attempt]);
+  function navigate(nextKind: string, nextSearch: string) {
+    const values = new URLSearchParams();
+    if (nextKind) values.set("kind", nextKind);
+    if (nextSearch) values.set("q", nextSearch);
+    setKind(nextKind);
+    setSearch(nextSearch);
+    setCursor(0);
+    router.replace(`/explore${values.size ? "?" + values : ""}`, {
+      scroll: false,
+    });
+  }
   function submit(e: FormEvent) {
     e.preventDefault();
-    setCursor(0);
-    setSearch(query);
+    navigate(kind, query.trim());
   }
+  const currentCategory = categories.find((c) => c.value === kind);
   return (
     <main id="main" className="discovery-page">
-      <section className="hero">
+      <div className="page-heading discovery-heading">
         <div>
-          <p className="eyebrow">Discover your next move</p>
-          <h1>
-            Find your people.
-            <br />
-            Build your next chapter.
-          </h1>
-          <p>
-            Discover work worth doing, challenges worth taking and the
-            opportunities that move you forward.
-          </p>
-          <form role="search" onSubmit={submit} className="search">
-            <label className="sr-only" htmlFor="search">
-              Search opportunities
-            </label>
-            <input
-              id="search"
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search a role, skill or opportunity"
-            />
-            <button className="button">Find opportunities</button>
-          </form>
+          <div className="page-context">
+            <span className="context-rule" />
+            Made for your next step
+          </div>
+          <h1>Find your next opportunity.</h1>
+          <p>Internships, hackathons and events, brought together.</p>
         </div>
-        <aside
-          className="discovery-guide"
-          aria-label="Your opportunity journey"
-        >
-          <span className="guide-label">
-            A little direction. A lot of possibility.
+        <Link className="profile-invitation" href="/onboarding?edit=1">
+          <span className="profile-invitation-icon">
+            <Icon name="user" size={23} />
           </span>
-          <ol>
-            <li>
-              <span>01</span>
-              <div>
-                <strong>Find your fit</strong>
-                <p>Explore roles and challenges around your interests.</p>
-              </div>
-            </li>
-            <li>
-              <span>02</span>
-              <div>
-                <strong>Keep a shortlist</strong>
-                <p>Save the opportunities you want to come back to.</p>
-              </div>
-            </li>
-            <li>
-              <span>03</span>
-              <div>
-                <strong>Make your move</strong>
-                <p>Apply at the source and track your next steps.</p>
-              </div>
-            </li>
-          </ol>
-          <Link href="/workspace">
-            Go to your workspace <span aria-hidden="true">↗</span>
-          </Link>
-        </aside>
-      </section>
-      <div className="category-bar" aria-label="Opportunity categories">
-        {categories.map(([value, label]) => (
+          <span>
+            <strong>Make this feed yours</strong>
+            <span>Add your skills and interests</span>
+          </span>
+          <Icon name="arrow" size={18} />
+        </Link>
+      </div>
+      <form role="search" className="search discovery-search" onSubmit={submit}>
+        <Icon name="search" size={22} />
+        <label className="sr-only" htmlFor="search">
+          Search opportunities
+        </label>
+        <input
+          id="search"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Try a skill, role or opportunity"
+        />
+        <button className="button" type="submit">
+          Search<span className="search-button-label"> opportunities</span>
+          <Icon name="arrow" size={17} />
+        </button>
+      </form>
+      <div
+        className="category-bar"
+        role="group"
+        aria-label="Opportunity categories"
+      >
+        {categories.map((c) => (
           <button
-            key={value}
-            aria-pressed={kind === value}
-            onClick={() => {
-              setCursor(0);
-              setKind(value);
-            }}
+            key={c.label}
+            className={`category-control ${c.value.toLowerCase()}`}
+            aria-pressed={kind === c.value}
+            onClick={() => navigate(c.value, search)}
           >
-            {label}
+            <span className="category-control-icon">
+              <Icon
+                name={(categoryIcons[c.value] ?? c.icon) as IconName}
+                size={19}
+              />
+            </span>
+            {c.label}
           </button>
         ))}
       </div>
-      <section className="marketplace">
-        <aside className="editorial">
-          <p className="eyebrow">Your advantage</p>
-          <h2>
-            More relevant.
-            <br />
-            Less searching.
-          </h2>
-          <p>
-            Your education, interests and confirmed skills help shape your
-            matches.
-          </p>
-          <Link className="button secondary" href="/onboarding?edit=1">
-            Update your profile ↗
-          </Link>
-          <div className="tip">
-            <h3>Know before you apply</h3>
+      <section className="results" aria-labelledby="results-title">
+        <div className="section-heading results-heading">
+          <div>
+            <h2 id="results-title">
+              {search
+                ? `Results for “${search}”`
+                : kind
+                  ? currentCategory?.label
+                  : "Explore opportunities"}
+            </h2>
             <p>
-              Profile overlap is a starting point. Check eligibility, dates and
-              availability on the original listing.
+              {rank === "FRESH"
+                ? "Ordered using your confirmed profile and preferences."
+                : "Find something worth your next step."}
             </p>
           </div>
-        </aside>
-        <div className="results">
-          <div className="section-heading">
-            <div>
-              <h2>
-                {search
-                  ? "Results for “" + search + "”"
-                  : "Your next opportunity"}
-              </h2>
-              <p>
-                Explore external opportunities. Keep your next step in view.
-              </p>
-            </div>
-            <label>
-              Sort by
-              <select
-                value={sort}
-                onChange={(e) => {
-                  setCursor(0);
-                  setSort(e.target.value);
-                }}
-              >
-                <option value="deadline">Closing soon</option>
-                <option value="newest">Newest</option>
-                <option value="match">My match</option>
-              </select>
-            </label>
+          <label className="sort-control">
+            <span>Sort by</span>
+            <select
+              value={sort}
+              onChange={(e) => {
+                setCursor(0);
+                setSort(e.target.value);
+              }}
+            >
+              <option value="match">Best fit</option>
+              <option value="deadline">Closing soon</option>
+              <option value="newest">Newest first</option>
+            </select>
+          </label>
+        </div>
+        {rank === "SIGN_IN_REQUIRED" && (
+          <div className="feed-note">
+            <Icon name="user" size={17} />
+            <p>
+              <Link href="/login">
+                Sign in for personalized recommendations.
+              </Link>{" "}
+              You’re browsing the newest opportunities.
+            </p>
           </div>
-          {rank === "PENDING" && polls < 6 && (
-            <p role="status">
+        )}
+        {rank === "PENDING" && polls < 6 && (
+          <div className="feed-note" role="status">
+            <Icon name="refresh" size={17} />
+            <p>
               Your match ranking is being calculated. Showing newest
               opportunities for now.
             </p>
-          )}
-          {(rank === "UNAVAILABLE" || (rank === "PENDING" && polls >= 6)) && (
-            <p role="status">
-              Matching is temporarily unavailable. Showing newest opportunities.{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  setPolls(0);
-                  setAttempt((value) => value + 1);
-                }}
-              >
-                Check ranking again
-              </button>
-            </p>
-          )}
-          {rank === "SIGN_IN_REQUIRED" && (
+          </div>
+        )}
+        {(rank === "UNAVAILABLE" || (rank === "PENDING" && polls >= 6)) && (
+          <div className="feed-note" role="status">
+            <Icon name="refresh" size={17} />
             <p>
-              <Link href="/login">Sign in</Link> for personalized matching.
-              Showing newest opportunities.
+              Matching is taking longer than expected. You can keep browsing.
             </p>
-          )}
-          {error ? (
-            <div className="empty" role="alert">
-              <h3>We couldn’t load opportunities.</h3>
+            <button
+              className="text-button"
+              onClick={() => {
+                setPolls(0);
+                setAttempt((v) => v + 1);
+              }}
+            >
+              Check ranking again
+            </button>
+          </div>
+        )}
+        {(search || kind) && (
+          <div className="active-filters">
+            <span>
+              {[currentCategory?.value ? currentCategory.label : null, search]
+                .filter(Boolean)
+                .join(" / ")}
+            </span>
+            <button
+              className="text-button"
+              onClick={() => {
+                setQuery("");
+                navigate("", "");
+              }}
+            >
+              <Icon name="close" size={15} />
+              Clear filters
+            </button>
+          </div>
+        )}
+        {error && (
+          <div className="feedback error-feedback" role="alert">
+            <div>
+              <strong>Unable to load opportunities.</strong>
               <p>{error}</p>
-              <button onClick={() => setAttempt(attempt + 1)}>Try again</button>
             </div>
-          ) : loading ? (
-            <OpportunitySkeleton />
-          ) : items.length ? (
+            <button
+              className="button secondary"
+              onClick={() => setAttempt((v) => v + 1)}
+            >
+              Try again
+            </button>
+          </div>
+        )}
+        {loading && items.length === 0 ? (
+          <OpportunitySkeleton />
+        ) : items.length > 0 ? (
+          <>
+            <div className="refresh-status" role="status">
+              {loading ? "Updating opportunities…" : ""}
+            </div>
             <div className="event-grid">
               {items.map((o) => (
-                <OpportunityCard key={o.id} opportunity={o} />
+                <OpportunityCard
+                  key={o.id}
+                  opportunity={o}
+                  saved={savedIds.has(o.id)}
+                  onSavedChange={(value) =>
+                    setSavedIds((previous) => {
+                      const copy = new Set(previous);
+                      if (value) copy.add(o.id);
+                      else copy.delete(o.id);
+                      return copy;
+                    })
+                  }
+                />
               ))}
             </div>
-          ) : (
-            <div className="empty">
-              <h3>
-                {search || kind
-                  ? "No opportunities match yet."
-                  : "Your next chapter is on its way."}
-              </h3>
-              <p>
-                {search || kind
-                  ? "Try another keyword or category."
-                  : "No published opportunities are available yet. Check back as sources refresh."}
-              </p>
-              {(search || kind) && (
-                <button
-                  onClick={() => {
-                    setCursor(0);
-                    setKind("");
-                    setSearch("");
-                    setQuery("");
-                  }}
-                >
-                  Clear filters
-                </button>
-              )}
-            </div>
-          )}
-          <div className="pagination">
+          </>
+        ) : !error ? (
+          <div className="empty discovery-empty">
+            <span className="empty-icon">
+              <Icon name="search" size={30} />
+            </span>
+            <h3>
+              {search || kind
+                ? "No opportunities match these filters."
+                : "The next opportunities will appear here."}
+            </h3>
+            <p>
+              {search || kind
+                ? "Try a broader keyword or explore another category."
+                : "There are no active listings to show right now. Try again after sources refresh."}
+            </p>
+            <button
+              className="button secondary"
+              onClick={() => {
+                if (search || kind) {
+                  setQuery("");
+                  navigate("", "");
+                } else setAttempt((v) => v + 1);
+              }}
+            >
+              {search || kind
+                ? "Explore all opportunities"
+                : "Refresh opportunities"}
+            </button>
+          </div>
+        ) : null}
+        <div className="pagination">
+          <span>
+            {items.length > 0 ? `Page ${Math.floor(cursor / 12) + 1}` : ""}
+          </span>
+          <div>
             {cursor > 0 && (
               <button
-                disabled={loading}
-                onClick={() => setCursor(Math.max(0, cursor - 12))}
+                disabled={loading || Boolean(error)}
+                onClick={() => {
+                  setCursor(Math.max(0, cursor - 12));
+                  document
+                    .getElementById("results-title")
+                    ?.scrollIntoView({ block: "start" });
+                }}
               >
                 Previous
               </button>
             )}
             {next !== null && (
-              <button disabled={loading} onClick={() => setCursor(next)}>
+              <button
+                className="button secondary"
+                disabled={loading || Boolean(error)}
+                onClick={() => {
+                  setCursor(next);
+                  document
+                    .getElementById("results-title")
+                    ?.scrollIntoView({ block: "start" });
+                }}
+              >
                 Next opportunities
+                <Icon name="arrow" size={16} />
               </button>
             )}
           </div>
         </div>
       </section>
+      <div className="source-note">
+        <Icon name="external" size={16} />
+        <p>
+          Explore here. Apply on the original website. Check its current
+          requirements and availability before applying.
+        </p>
+      </div>
     </main>
+  );
+}
+export default function ExplorePage() {
+  return (
+    <Suspense fallback={<DiscoveryLoading />}>
+      <Explore />
+    </Suspense>
   );
 }
