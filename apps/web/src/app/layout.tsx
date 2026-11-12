@@ -1,11 +1,22 @@
 import { AuthProvider, SessionBridge } from "@/components/auth-provider";
-import type { Metadata } from "next";
-import Link from "next/link";
+import { SiteChrome } from "@/components/site-chrome";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+
 export const metadata: Metadata = {
-  title: "Alignn · Coming soon",
-  description: "Alignn is building a clearer path to your next opportunity.",
+  metadataBase: new URL(process.env.PUBLIC_ORIGIN ?? "http://localhost:3000"),
+  title: {
+    default: "Alignn | The missing link to your future",
+    template: "%s | Alignn",
+  },
+  description:
+    "Alignn brings internships, jobs, hackathons and competitions into one place, matched to your profile. Coming soon.",
 };
+
+export const viewport: Viewport = {
+  themeColor: "#0c3c29",
+};
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const configured = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
   const content = (
@@ -13,25 +24,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <a className="skip" href="#main">
         Skip to content
       </a>
-      <header className="site-header">
-        <Link className="brand" href="/">
-          <svg aria-hidden="true" viewBox="0 0 48 48">
-            <path
-              d="M12 12C19-2 38 9 32 22L13 37C0 42 1 20 17 20H31C49 20 47 47 30 42M31 10V34"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="5"
-              strokeLinecap="round"
-            />
-          </svg>
-          alignn
-        </Link>
-      </header>
-      {configured ? <SessionBridge>{children}</SessionBridge> : children}
-      <footer className="site-footer">
-        <strong>Find your people. Find your next step.</strong>
-        <span>Alignn · Coming soon.</span>
-      </footer>
+      <SiteChrome>
+        {configured ? <SessionBridge>{children}</SessionBridge> : children}
+      </SiteChrome>
     </>
   );
   return (
