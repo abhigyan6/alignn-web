@@ -135,7 +135,7 @@ For web changes use installed ESLint, Prettier, typecheck and build, plus focuse
 
 The overall refactor is complete when all ten outcomes are evidenced by code boundaries, regression checks, updated contributor docs and reviewed focused PRs. Keep a migration/ownership map so later features have an obvious home. Remove temporary compatibility modules once their callers are migrated and proven unused.
 
-No application code, services, tests, integrations, remote branches, PRs or deployments were changed by the audit/design phase. A local `codex/codebase-organization-design` branch was created from `5440d34` to hold only the proposed design; existing dirty files were retained. GitHub PR descriptions report prior passing checks for #6/#7; those are author-reported historical evidence, not independent checks by this chat. Source observations do not establish authenticated or deployed behavior. Remaining launch/security/product backlog stays visible and outside this structural refactor.
+No application code, services, tests, integrations, existing remote branches, existing PRs or deployments were changed by the audit/design phase. A local `codex/codebase-organization-design` branch was created from `5440d34` to hold only the proposed design; existing dirty files were retained. GitHub PR descriptions report prior passing checks for #6/#7; those are author-reported historical evidence, not independent checks by this chat. Source observations do not establish authenticated or deployed behavior. Remaining launch/security/product backlog stays visible and outside this structural refactor.
 
 ## Source links
 
@@ -146,3 +146,7 @@ GitHub metadata was checked directly through the connected GitHub tools on 13 No
 Claude Code completed a source-only Sonnet/high audit with Read/Glob/Grep tools, restricted file access, no shell, writes, MCP servers or credential-file reads. Its report was checked by Codex against relevant callers. Audit cost reported by that run: $1.0821488; this is not a total account bill. No checks ran. A fresh design reviewer found no important unanswered planning questions.
 
 Codex did not adopt every audit suggestion: routers are needed only for HTTP-exposed domains, client-side validation/display remains useful UX rather than competing authorization, and remote identity verification must not be cached away. The homepage already has a catch handler, contrary to one audit sentence. No missing-document claim is made from a limited search. Potentially redundant endpoints, alternate ingestion paths and historical models remain candidates for later decisions, not automatic deletion.
+
+## Documentation validation
+
+The proposed design passed Prettier and both repository pre-commit Gitleaks scans with full redaction and zero findings in the staged document. The existing dirty README and untracked handover files remained outside the commit. The design is published on its own task branch for a draft PR against `codex/session-readiness-repair` (dependency #7); publication does not approve implementation or any existing PR.
