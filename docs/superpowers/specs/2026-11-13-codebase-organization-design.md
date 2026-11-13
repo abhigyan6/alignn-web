@@ -1,6 +1,6 @@
 # Alignn repository organization and refactor design
 
-13 November 2026. Status: **proposed; awaiting design approval**. The user selected feature-by-feature cleanup, with Codex coordinating/reviewing and Claude Code CLI performing bounded implementation. Superpowers planning is explicitly requested. This document does not claim implementation, tests, merges or deployment.
+13 November 2026. Status: **approved by the user in chat on 13 November 2026**. The user selected feature-by-feature cleanup, with Codex coordinating/reviewing and Claude Code CLI performing bounded implementation. Superpowers planning is explicitly requested. This document does not claim implementation, tests, merges or deployment.
 
 ## Intent and scope
 
@@ -14,7 +14,7 @@ Non-goals: redesigning screens; restoring event hosting; changing authentication
 
 The user chose incremental feature-by-feature cleanup over a folders-first move. The former addresses ownership and behavior together and permits targeted regression checks. A folders-first move offers faster visual tidiness but creates widespread import churn before improving state and errors. A clean-slate rewrite conflicts with the instruction to preserve existing work and is excluded.
 
-Codex's proposed implementation choices are dependency-free state management initially, feature folders inside the existing web application, and continued use of the existing backend domains. These choices are part of this proposed design, not prior user approvals.
+Codex's proposed implementation choices are dependency-free state management initially, feature folders inside the existing web application, and continued use of the existing backend domains. These choices were included in the design approved by the user on 13 November 2026.
 
 ## Verified checkpoint and branch inventory
 
@@ -150,3 +150,7 @@ Codex did not adopt every audit suggestion: routers are needed only for HTTP-exp
 ## Documentation validation
 
 The proposed design passed Prettier and both repository pre-commit Gitleaks scans with full redaction and zero findings in the staged document. The existing dirty README and untracked handover files remained outside the commit. The design is published on its own task branch for a draft PR against `codex/session-readiness-repair` (dependency #7); publication does not approve implementation or any existing PR.
+
+## Post-approval checkpoint
+
+The user approved this design on 13 November 2026. A fresh GitHub check then confirmed PR #6 merged into `codex/version-control-hygiene` at `0b95ee461d1293c73bab95803d5c113739236326`; #3 and #7 remain open. This supersedes the earlier inventory statement that #6 is open. The first bounded implementation plan is `docs/superpowers/plans/2026-11-13-config-boundaries.md`; its separate review is pending. No application code, tests or merges were performed by this planning update.
