@@ -3,6 +3,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, ApiError, Opportunity } from "@/lib/api";
+import { useSessionReady } from "@/lib/session-readiness";
+import { useSavedIds } from "@/lib/saved-ids";
+import SavedStatusNote from "@/components/saved-status-note";
 import {
   categoryIcons,
   isClosed,
@@ -25,10 +28,13 @@ export default function Detail() {
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
-    [saved, setSaved] = useState(false),
     [tracked, setTracked] = useState(false),
     [attempt, setAttempt] = useState(0),
     [needsSignIn, setNeedsSignIn] = useState(false);
+  const sessionReady = useSessionReady();
+  const savedIds = useSavedIds();
+  const saved = savedIds.ids.has(id);
+  const savedKnown = savedIds.status === "ready";
   const [feedbackFor, setFeedbackFor] = useState<
     "save" | "track" | "fit" | null
   >(null);
@@ -42,7 +48,6 @@ export default function Detail() {
     setError("");
     setFit(null);
     setMessage("");
-    setSaved(false);
     setTracked(false);
     setNeedsSignIn(false);
     setFeedbackFor(null);
@@ -53,16 +58,11 @@ export default function Detail() {
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
       });
-    api<{ items: Opportunity[] }>("/me/saved", { signal: controller.signal })
-      .then((data) => {
-        if (!controller.signal.aborted)
-          setSaved(data.items.some((item) => item.id === id));
-      })
-      .catch(() => {});
     return () => controller.abort();
   }, [id, attempt]);
   async function action(kind: "save" | "track" | "fit") {
-    if (!o || busy) return;
+    if (!o || busy || !sessionReady) return;
+    if (kind === "save" && !savedKnown) return;
     setBusy(true);
     setMessage("");
     setNeedsSignIn(false);
@@ -73,7 +73,7 @@ export default function Detail() {
         await api(`/opportunities/${id}/save`, {
           method: saved ? "DELETE" : "POST",
         });
-        setSaved(!saved);
+        savedIds.setSaved(id, !saved);
         setMessage(saved ? "Removed from Saved." : "Added to Saved.");
       } else {
         await api("/applications", {
@@ -191,7 +191,7 @@ export default function Detail() {
                 </p>
                 <button
                   className="button secondary"
-                  disabled={busy}
+                  disabled={busy || !sessionReady}
                   onClick={() => action("fit")}
                 >
                   <Icon name="user" size={18} />
@@ -293,10 +293,14 @@ export default function Detail() {
                   <Icon name="external" size={17} />
                 </a>
               )}
+              {savedIds.status === "unknown" && (
+                <SavedStatusNote onRetry={savedIds.retry} />
+              )}
               <button
                 className="button outline"
                 aria-pressed={saved}
-                disabled={busy}
+                disabled={busy || !sessionReady || !savedKnown}
+                aria-busy={!sessionReady || !savedKnown}
                 onClick={() => action("save")}
               >
                 <Icon name={saved ? "check" : "bookmark"} size={18} />
@@ -305,7 +309,7 @@ export default function Detail() {
               {!closed && (
                 <button
                   className="text-button"
-                  disabled={busy || tracked}
+                  disabled={busy || tracked || !sessionReady}
                   onClick={() => action("track")}
                 >
                   <Icon name="briefcase" size={17} />

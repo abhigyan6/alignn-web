@@ -13,7 +13,8 @@ export default defineConfig({
   testDir: "./tests",
   fullyParallel: false,
   use: {
-    baseURL: "http://localhost:3000",
+    // Isolated runs set PLAYWRIGHT_BASE_URL to match their dev server port.
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000",
     trace: "retain-on-failure",
     launchOptions: executablePath ? { executablePath } : {},
   },
