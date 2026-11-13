@@ -1,7 +1,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest, NextFetchEvent } from "next/server";
-import { isClerkServerConfigured, publicOrigin } from "@/lib/config";
+import { isClerkServerConfigured, publicOrigin } from "@/lib/config/server";
 const middleware = clerkMiddleware({
   signInUrl: "/login",
   signUpUrl: "/signup",

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { SignUp } from "@clerk/nextjs";
 import { Suspense } from "react";
 import AuthShell, { authAppearance } from "@/components/auth-shell";
-import { isClerkServerConfigured } from "@/lib/config";
+import { isClerkServerConfigured } from "@/lib/config/server";
 
 export default async function Page() {
   if (isClerkServerConfigured) {
