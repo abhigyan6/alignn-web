@@ -3,7 +3,7 @@ import { requireAccountProfile } from "@/lib/account-profile";
 import AccountLoading from "@/components/account-loading";
 import { Suspense } from "react";
 import Screen from "@/components/onboarding";
-import { isClerkServerConfigured } from "@/lib/config";
+import { isClerkServerConfigured } from "@/lib/config/server";
 type SearchParams = Promise<{ edit?: string | string[] }>;
 async function ProtectedScreen({
   searchParams,

@@ -5,7 +5,7 @@ import "./globals.css";
 import CookieNotice from "@/components/cookie-notice";
 import AppNavigation from "@/components/app-navigation";
 import { BrandMark } from "@/components/icon";
-import { isClerkPublishableKeyConfigured } from "@/lib/config";
+import { isClerkPublishableKeyConfigured } from "@/lib/config/client";
 export const metadata: Metadata = {
   title: "Alignn · Find your next opportunity",
   description:
