@@ -7,6 +7,9 @@ import OpportunitySkeleton from "@/components/opportunity-skeleton";
 import DiscoveryLoading from "@/components/discovery-loading";
 import Icon, { type IconName } from "@/components/icon";
 import { api, Opportunity } from "@/lib/api";
+import { useSessionKey } from "@/lib/session-readiness";
+import { useSavedIds } from "@/lib/saved-ids";
+import SavedStatusNote from "@/components/saved-status-note";
 
 const categories = [
   { value: "", label: "Everything", icon: "grid" },
@@ -33,8 +36,14 @@ function Explore() {
     [next, setNext] = useState<number | null>(null),
     [cursor, setCursor] = useState(0),
     [attempt, setAttempt] = useState(0),
-    [polls, setPolls] = useState(0),
-    [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+    [polls, setPolls] = useState(0);
+  const sessionKey = useSessionKey();
+  const sessionReady = sessionKey !== null;
+  const saved = useSavedIds();
+  const savedPending = saved.status !== "ready";
+  // Best-fit ranking depends on who is signed in, so refresh it when the
+  // session becomes ready or changes account. Other sorts are not personalized.
+  const rankingSession = sort === "match" ? sessionKey : null;
   const loadedKey = useRef("");
   useEffect(() => {
     const nextKind = params.get("kind") ?? "",
@@ -44,13 +53,6 @@ function Explore() {
     setQuery(nextSearch);
     setCursor(0);
   }, [params]);
-  useEffect(() => {
-    const controller = new AbortController();
-    api<{ items: Opportunity[] }>("/me/saved", { signal: controller.signal })
-      .then((data) => setSavedIds(new Set(data.items.map((o) => o.id))))
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
   useEffect(() => setPolls(0), [kind, search, sort]);
   useEffect(() => {
     if (rank !== "PENDING" || sort !== "match" || polls >= 6) return;
@@ -100,7 +102,7 @@ function Explore() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [kind, search, sort, cursor, attempt]);
+  }, [kind, search, sort, cursor, attempt, rankingSession]);
   function navigate(nextKind: string, nextSearch: string) {
     const values = new URLSearchParams();
     if (nextKind) values.set("kind", nextKind);
@@ -209,7 +211,10 @@ function Explore() {
             </select>
           </label>
         </div>
-        {rank === "SIGN_IN_REQUIRED" && (
+        {saved.status === "unknown" && (
+          <SavedStatusNote onRetry={saved.retry} />
+        )}
+        {rank === "SIGN_IN_REQUIRED" && sessionReady && (
           <div className="feed-note">
             <Icon name="user" size={17} />
             <p>
@@ -291,15 +296,9 @@ function Explore() {
                 <OpportunityCard
                   key={o.id}
                   opportunity={o}
-                  saved={savedIds.has(o.id)}
-                  onSavedChange={(value) =>
-                    setSavedIds((previous) => {
-                      const copy = new Set(previous);
-                      if (value) copy.add(o.id);
-                      else copy.delete(o.id);
-                      return copy;
-                    })
-                  }
+                  saved={saved.ids.has(o.id)}
+                  savedPending={savedPending}
+                  onSavedChange={(value) => saved.setSaved(o.id, value)}
                 />
               ))}
             </div>

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, Opportunity } from "@/lib/api";
+import { useSavedIds } from "@/lib/saved-ids";
+import SavedStatusNote from "@/components/saved-status-note";
 import Icon, { BrandMark } from "@/components/icon";
 import OpportunityCard, { sourceLabel } from "@/components/opportunity-card";
 import OpportunitySkeleton from "@/components/opportunity-skeleton";
@@ -27,6 +29,8 @@ export default function Landing() {
       });
     return () => controller.abort();
   }, []);
+  const saved = useSavedIds();
+  const savedPending = saved.status !== "ready";
   function search(e: FormEvent) {
     e.preventDefault();
     router.push(
@@ -198,11 +202,22 @@ export default function Landing() {
         {loading ? (
           <OpportunitySkeleton />
         ) : items.length ? (
-          <div className="event-grid home-event-grid">
-            {items.map((o) => (
-              <OpportunityCard key={o.id} opportunity={o} />
-            ))}
-          </div>
+          <>
+            {saved.status === "unknown" && (
+              <SavedStatusNote onRetry={saved.retry} />
+            )}
+            <div className="event-grid home-event-grid">
+              {items.map((o) => (
+                <OpportunityCard
+                  key={o.id}
+                  opportunity={o}
+                  saved={saved.ids.has(o.id)}
+                  savedPending={savedPending}
+                  onSavedChange={(value) => saved.setSaved(o.id, value)}
+                />
+              ))}
+            </div>
+          </>
         ) : (
           <div className="empty">
             <p>

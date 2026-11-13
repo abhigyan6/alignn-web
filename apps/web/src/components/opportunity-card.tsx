@@ -41,10 +41,13 @@ export const categoryIcons: Record<string, IconName> = {
 export default function OpportunityCard({
   opportunity: o,
   saved = false,
+  savedPending = false,
   onSavedChange,
 }: {
   opportunity: Opportunity;
   saved?: boolean;
+  /** Saved state is not known yet (session or /me/saved still loading). */
+  savedPending?: boolean;
   onSavedChange?: (saved: boolean) => void;
 }) {
   const router = useRouter();
@@ -66,7 +69,7 @@ export default function OpportunityCard({
     ...new Set([...(o.required_skills ?? []), ...(o.preferred_skills ?? [])]),
   ].slice(0, 3);
   async function toggleSave() {
-    if (busy) return;
+    if (busy || savedPending) return;
     setBusy(true);
     setError("");
     try {
@@ -101,10 +104,15 @@ export default function OpportunityCard({
           </span>
         </div>
         <button
-          className={`bookmark-button ${isSaved ? "is-saved" : ""}`}
-          aria-label={`${isSaved ? "Remove saved" : "Save"} ${o.title}`}
-          aria-pressed={isSaved}
-          disabled={busy}
+          className={`bookmark-button ${isSaved && !savedPending ? "is-saved" : ""}`}
+          aria-label={
+            savedPending
+              ? `Checking saved status for ${o.title}`
+              : `${isSaved ? "Remove saved" : "Save"} ${o.title}`
+          }
+          aria-pressed={savedPending ? undefined : isSaved}
+          aria-busy={savedPending || busy}
+          disabled={busy || savedPending}
           onClick={toggleSave}
         >
           <Icon name="bookmark" />

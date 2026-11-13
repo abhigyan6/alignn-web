@@ -104,6 +104,14 @@ test("saving is separate from opening a listing and redirects signed-out student
       },
     }),
   );
+  // A signed-out student's saved read is a 401: nothing is saved, and the
+  // save control becomes available once that is known.
+  await page.route("**/api/v1/me/saved", (route) =>
+    route.fulfill({
+      status: 401,
+      json: { error: { message: "Sign in to continue." } },
+    }),
+  );
   await page.route(`**/api/v1/opportunities/${fixture.id}/save`, (route) =>
     route.fulfill({
       status: 401,
