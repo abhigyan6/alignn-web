@@ -3,19 +3,14 @@ import { redirect } from "next/navigation";
 import { SignUp } from "@clerk/nextjs";
 import { Suspense } from "react";
 import AuthShell, { authAppearance } from "@/components/auth-shell";
+import { isClerkServerConfigured } from "@/lib/config";
 
 export default async function Page() {
-  if (
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
-    process.env.CLERK_SECRET_KEY
-  ) {
+  if (isClerkServerConfigured) {
     const { userId } = await auth();
     if (userId) redirect("/auth/redirect");
   }
-  const configured = Boolean(
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
-    process.env.CLERK_SECRET_KEY,
-  );
+  const configured = isClerkServerConfigured;
   return (
     <AuthShell
       signUp

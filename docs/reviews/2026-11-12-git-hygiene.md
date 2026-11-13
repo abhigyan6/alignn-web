@@ -1,0 +1,15 @@
+# Git hygiene and redacted history scan — 12 November 2026
+
+Scope: active abhigyan6/alignn-web checkout only. Fetched all remote branches/tags, verified this is not a shallow checkout, then ran Gitleaks 8.30.1 using its default rules, full redaction and `--log-opts='--all --reflog --full-history'`. The scanner reported 35 commits and approximately 2.17MB scanned, exit code0, and **zero findings**. No secret values were printed or tested against providers. Ignored env/auth files were not opened. No shared history was rewritten.
+
+This establishes no default-rule matches in the available fetched history and local reflogs. It does not establish absence of all possible secrets, inspect unreachable/deleted history unavailable to this clone, or verify current production credentials. Redacted temporary scan artifacts remain outside Git under /tmp/alignn-gitleaks-audit; only this summary is committed. There were no findings requiring rotation or a history-cleanup decision from this scan.
+
+Added environment/build/cache/OS/editor ignore patterns, repository-local fail-closed pre-commit hooks, lint-staged, supported ESLint10 JavaScript/TypeScript recommended correctness rules, existing Ruff lint/format for Python, Prettier formatting, Conventional Commits and branch/PR guidance in CLAUDE.md and AGENTS.md, plus a PR template. Hook execution scans staged changes before and after format/lint fixes; lint-staged protects unstaged hunks. Missing Gitleaks or Node dependencies blocks the commit. Python changes require uv and the locked API environment. Local hooks are not a replacement for CI or repository branch protections.
+
+The new ESLint correctness baseline passes. Adopting the full Next.js React-compiler lint preset separately exposed 13 existing findings (mostly synchronous state updates in effects, plus a hard-navigation anchor). That broader compiler migration is not enabled by this tooling-only change; application behavior was not changed to make the hygiene task pass. The selected recommended JS/TS rules remain enabled.
+
+Primary tool references: https://github.com/gitleaks/gitleaks and https://github.com/lint-staged/lint-staged. Exact dependencies are pinned by package-lock.json. Dependency audit found zero vulnerabilities after installation.
+
+Follow-up verification: the final pre-design history scan reported41 commits and approximately2.26MB, with zero findings. Separate redacted scans of commit messages and annotated tag contents also reported zero findings. The hook installer was tested against an inherited/global hooksPath in a disposable repository and correctly refused to overwrite it.
+
+The existing GitHub API check initially failed on import ordering. Added explicit alignn/alignn_scraper first-party classification so invocation context does not change isort grouping, and applied mechanical import normalization. With the configured dedicated alignn_test database migrated to current head, the full API suite passed **106 tests in11.06s**. The first local run used an outdated test schema and was not counted as a pass. No application database or localhost web/API service was started or modified by these checks.

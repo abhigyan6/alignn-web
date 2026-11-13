@@ -3,6 +3,7 @@ import { requireAccountProfile } from "@/lib/account-profile";
 import AccountLoading from "@/components/account-loading";
 import { Suspense } from "react";
 import Screen from "@/components/onboarding";
+import { isClerkServerConfigured } from "@/lib/config";
 type SearchParams = Promise<{ edit?: string | string[] }>;
 async function ProtectedScreen({
   searchParams,
@@ -15,11 +16,7 @@ async function ProtectedScreen({
   return <Screen initialProfile={profile} editing={editing} />;
 }
 export default function Page({ searchParams }: { searchParams: SearchParams }) {
-  if (
-    !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
-    !process.env.CLERK_SECRET_KEY
-  )
-    redirect("/login");
+  if (!isClerkServerConfigured) redirect("/login");
   return (
     <Suspense fallback={<AccountLoading onboarding />}>
       <ProtectedScreen searchParams={searchParams} />
